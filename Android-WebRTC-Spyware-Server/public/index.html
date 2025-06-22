@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Android Spyware Dashboard</title>
+  <style>
+    :root {
+      --primary-dark: #1e3a8a;
+      --primary-light: #3b82f6;
+      --background-dark: #111827;
+      --background-secondary: #1f2937;
+      --text-light: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --accent: #10b981;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--background-dark);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dashboard {
+      flex: 1;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 1rem;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 2rem;
+      background-color: var(--background-secondary);
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .header-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 1rem;
+      height: calc(100vh - 120px);
+    }
+
+    .video-container {
+      background-color: var(--background-secondary);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #remoteVideo {
+      width: 100%;
+      height: 100%;
+      max-height: 600px;
+      background: black;
+      border-radius: 0.4rem;
+      object-fit: contain;
+      border: 1px solid var(--primary-dark);
+    }
+
+    .status-panel {
+      background-color: var(--background-secondary);
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #status {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 0.75rem;
+      border-radius: 0.3rem;
+      line-height: 1.4;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        height: auto;
+      }
+
+      .status-panel {
+        order: 1;
+      }
+
+      .video-container {
+        order: 2;
+      }
+
+      #remoteVideo {
+        max-height: 400px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .dashboard {
+        padding: 0.5rem;
+      }
+
+      header {
+        padding: 1rem;
+      }
+
+      .header-title {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <header>
+      <h1 class="header-title">Android Surveillance Hub</h1>
+    </header>
+    <div class="main-content">
+      <div class="video-container">
+        <video id="remoteVideo" autoplay playsinline></video>
+      </div>
+      <div class="status-panel">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <span>Stream Status</span>
+        </div>
+        <div id="status">Waiting for Android stream...</div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
