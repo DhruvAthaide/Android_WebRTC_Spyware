@@ -1,11 +1,19 @@
 [versions]
 agp = "8.10.1"
+androidxJunit = "1.1.5"
+appcompatVersion = "1.6.1"
 cardview = "1.0.0"
+constraintlayoutVersion = "2.1.4"
 core = "1.16.0"
+espressoCoreVersion = "3.5.1"
+materialVersion = "1.11.0"
 okhttp = "4.12.0"
+playServicesLocation = "21.3.0"
 preference = "1.2.1"
+recyclerviewVersion = "1.3.2"
 socketIoClient = "2.0.1"
 streamWebrtcAndroid = "1.1.1"
+streamWebrtcAndroidVersion = "1.0.4"
 webrtc = "1.0.32006"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -18,8 +26,14 @@ recyclerview = "1.4.0"
 x_libs_include = " ['*.jar'])"
 
 [libraries]
+androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activity" }
+androidx-constraintlayout-v214 = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayoutVersion" }
+androidx-espresso-core-v351 = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCoreVersion" }
+androidx-junit-v115 = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }
+appcompat-v161 = { module = "androidx.appcompat:appcompat", version.ref = "appcompatVersion" }
 cardview = { module = "androidx.cardview:cardview", version.ref = "cardview" }
 core = { module = "androidx.core:core", version.ref = "core" }
+core-ktx = { module = "androidx.core:core-ktx", version.ref = "core" }
 google-webrtc = { module = "org.webrtc:google-webrtc", version.ref = "webrtc" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -28,11 +42,15 @@ appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "a
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+material-v1110 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 preference = { module = "androidx.preference:preference", version.ref = "preference" }
 recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
+recyclerview-v132 = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerviewVersion" }
 socket-io-client = { module = "io.socket:socket.io-client", version.ref = "socketIoClient" }
 stream-webrtc-android = { module = "io.getstream:stream-webrtc-android", version.ref = "streamWebrtcAndroid" }
+stream-webrtc-android-v104 = { module = "io.getstream:stream-webrtc-android", version.ref = "streamWebrtcAndroidVersion" }
 x_libs_include = { module = "fileTree(dir: 'libs', include", version.ref = "x_libs_include" }
 
 [plugins]

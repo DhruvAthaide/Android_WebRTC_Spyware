@@ -1,166 +1,498 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Android Surveillance Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root {
-      --primary-dark: #1e3a8a;
-      --primary-light: #3b82f6;
-      --background-dark: #0f172a;
-      --background-secondary: #1e293b;
-      --text-light: #f1f5f9;
-      --text-secondary: #94a3b8;
-      --accent: #22d3ee;
-    }
-
-    body {
-      background-color: var(--background-dark);
-      color: var(--text-light);
-    }
-
-    /* Fade-in animation for elements */
-    .fade-in {
-      animation: fadeIn 0.5s ease-in;
-    }
-
-    @keyframes fadeIn {
-      0% { opacity: 0; transform: translateY(10px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Scale animation for hover effects */
-    .hover-scale {
-      transition: transform 0.3s ease;
-    }
-
-    .hover-scale:hover {
-      transform: scale(1.02);
-    }
-
-    /* Pulse animation for status dot */
-    .status-dot {
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.4; }
-      100% { opacity: 1; }
-    }
-
-    /* Video container default aspect ratio */
-    .video-aspect-camera {
-      aspect-ratio: 4 / 3; /* Matches 640x480 camera */
-    }
-
-    .video-aspect-screen {
-      aspect-ratio: 16 / 9; /* Matches 960x540 screen */
-    }
-
-    /* Styling for notification, SMS, and call log entries */
-    .data-entry {
-      padding: 0.5rem;
-      margin-bottom: 0.5rem;
-      border-left: 3px solid var(--accent);
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 0.25rem;
-      transition: background 0.3s ease;
-    }
-
-    .data-entry:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-
-    .data-entry p {
-      margin: 0;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Responsive video containers */
-    @media (max-width: 1024px) {
-      .video-aspect-camera, .video-aspect-screen {
-        aspect-ratio: auto;
-        max-height: 400px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Surveillance Hub</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0c1426 0%, #1a202c 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            padding: 12px 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            margin: 0;
+        }
+        
+        #status {
+            text-align: center;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+            border-radius: 8px;
+            margin: 12px auto;
+            max-width: 250px;
+            box-shadow: 0 4px 15px rgba(30, 64, 175, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        #retryButton {
+            display: none;
+            margin: 8px auto;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        #retryButton:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .main-content {
+            padding: 20px;
+            width: 100%;
+            margin: 0;
+        }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 30px;
+            height: calc(100vh - 140px);
+        }
+        
+        .video-section {
+            grid-row: 1 / span 4;
+        }
+        
+        .video-container {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            /* height: 100%; */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .video-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .video-header h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .live-indicator {
+            background: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: auto;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        #remoteVideo {
+            width: 100%;
+            height: calc(100vh - 200px);
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            border-radius: 12px;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            object-fit: cover;
+        }
+        
+        .content-right {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            height: 100%;
+        }
+        
+        .row {
+            display: flex;
+            gap: 18px;
+        }
+        
+        .row.single {
+            display: block;
+        }
+        
+        .row .card {
+            flex: 1;
+        }
+        
+        /* Base card styles */
+        .card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Notifications card */
+        .notifications-card {
+            height: 200px;
+        }
+        
+        /* Call logs card */
+        .call-logs-card {
+            height: 600px;
+        }
+        
+        /* SMS messages card */
+        .sms-messages-card {
+            height: 600px;
+        }
+        
+        /* GPS location card */
+        .gps-location-card {
+            height: 400px;
+        }
+        
+        /* Debug log card */
+        .debug-log-card {
+            height: 140px;
+        }
+        
+        .card h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .card-icon {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        
+        #notifications {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #notificationList {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #3b82f6 #1e3a8a;
+        }
+        
+        #callLogs, #smsMessages {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #callLogList, #smsList {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #3b82f6 #1e3a8a;
+        }
+        
+        #notifications::-webkit-scrollbar,
+        #callLogs::-webkit-scrollbar,
+        #smsMessages::-webkit-scrollbar,
+        #notificationList::-webkit-scrollbar,
+        #callLogList::-webkit-scrollbar,
+        #smsList::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #notifications::-webkit-scrollbar-track,
+        #callLogs::-webkit-scrollbar-track,
+        #smsMessages::-webkit-scrollbar-track,
+        #notificationList::-webkit-scrollbar-track,
+        #callLogList::-webkit-scrollbar-track,
+        #smsList::-webkit-scrollbar-track {
+            background: #1e3a8a;
+            border-radius: 3px;
+        }
+        
+        #notifications::-webkit-scrollbar-thumb,
+        #callLogs::-webkit-scrollbar-thumb,
+        #smsMessages::-webkit-scrollbar-thumb,
+        #notificationList::-webkit-scrollbar-thumb,
+        #callLogList::-webkit-scrollbar-thumb,
+        #smsList::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 3px;
+        }
+        
+        .notification, .call-log, .sms-message {
+            background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+            padding: 14px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        
+        .notification:hover, .call-log:hover, .sms-message:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #4338ca 100%);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateX(4px);
+        }
+        
+        .notification p, .call-log p, .sms-message p {
+            margin: 4px 0;
+            color: #e2e8f0;
+        }
+        
+        .timestamp {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        
+        #map {
+            height: 100%;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #map h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        #mapContainer {
+            flex: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            min-height: 200px;
+        }
+        
+        #debugLog {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            padding: 20px;
+            border-radius: 16px;
+            height: 100%;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #debugLog h2 {
+            color: #e2e8f0;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        #logMessages {
+            font-family: 'Courier New', monospace;
+            color: #94a3b8;
+            line-height: 1.4;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .video-section {
+                grid-row: auto;
+            }
+            
+            .row {
+                flex-direction: column;
+            }
+            
+            .notifications-card,
+            .call-logs-card,
+            .sms-messages-card,
+            .gps-location-card,
+            .debug-log-card {
+                height: auto;
+                min-height: 120px;
+            }
+            
+            #container {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .card {
+                padding: 16px;
+            }
+            
+            #container {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+    </style>
 </head>
-<body class="min-h-screen flex flex-col font-sans antialiased">
-<div class="dashboard flex-1 max-w-7xl mx-auto w-full p-4">
-  <header class="fade-in flex items-center justify-center py-6 bg-[var(--background-secondary)] rounded-lg shadow-lg mb-4">
-    <h1 class="text-3xl font-bold text-[var(--primary-light)] uppercase tracking-wide">Android Surveillance Hub</h1>
-  </header>
-  <div class="main-content flex flex-col gap-4">
-    <!-- Row 1: Camera Video -->
-    <div class="row-1 grid grid-cols-3 gap-4">
-      <div class="col-span-3 video-container bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in video-aspect-camera">
-        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Camera Stream</h2>
-        <video id="remoteVideo" autoplay playsinline class="w-full h-full rounded-md border border-[var(--primary-dark)] bg-black object-contain"></video>
-      </div>
+<body>
+    <div class="header">
+        <h1>Android Surveillance Hub</h1>
+        <div id="status">Connecting to server...</div>
+        <button id="retryButton">Retry Connection</button>
     </div>
-    <!-- Row 2: Screen-Sharing Video and Notifications -->
-    <div class="row-2 grid grid-cols-3 gap-4">
-      <div class="col-span-2 video-container bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in video-aspect-screen" id="screen-video-container">
-        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Screen Stream</h2>
-        <video id="screenVideo" autoplay playsinline class="w-full h-full rounded-md border border-[var(--primary-dark)] bg-black object-contain"></video>
-      </div>
-      <div class="notifications-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
-        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Live Notifications</h2>
-        <div id="notifications" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md h-80 overflow-y-auto">
-          <p>Waiting for notifications...</p>
+    
+    <div class="main-content">
+        <div class="main-layout">
+            <div class="video-section">
+                <div class="video-container">
+                    <div class="video-header">
+                        <h2>Live Camera Feed</h2>
+                        <div class="live-indicator">● LIVE</div>
+                    </div>
+                    <video id="remoteVideo" autoplay playsinline></video>
+                </div>
+            </div>
+            
+            <div class="content-right">
+                <!-- Row 1: Notifications -->
+                <div class="row single">
+                    <div class="card notifications-card flex max-h-50 overflow-y-auto">
+                        <h2>
+                            <div class="card-icon">🔔</div>
+                            Notifications
+                        </h2>
+                        <div id="notifications">
+                            <div id="notificationList"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Row 2: Call Logs and SMS Messages -->
+                <div class="row">
+                    <div class="card call-logs-card flex max-h-100 overflow-y-auto">
+                        <h2>
+                            <div class="card-icon">📞</div>
+                            Call Logs
+                        </h2>
+                        <div id="callLogs">
+                            <div id="callLogList"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="card sms-messages-card flex max-h-100 overflow-y-auto">
+                        <h2>
+                            <div class="card-icon">💬</div>
+                            SMS Messages
+                        </h2>
+                        <div id="smsMessages">
+                            <div id="smsList"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Row 3: GPS Location -->
+                <div class="row single">
+                    <div id="map" class="gps-location-card">
+                        <h2>
+                            <div class="card-icon">📍</div>
+                            GPS Location
+                        </h2>
+                        <div id="mapContainer"></div>
+                    </div>
+                </div>
+                
+                <!-- Row 4: Debug Logs -->
+                <div class="row single">
+                    <div id="debugLog" class="debug-log-card">
+                        <h2>Debug Log</h2>
+                        <div id="logMessages"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-    <!-- Row 3: SMS and Call Logs -->
-    <div class="row-3 grid grid-cols-2 gap-4">
-      <div class="sms-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
-        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">SMS Messages</h2>
-        <div id="sms" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md h-64 overflow-y-auto">
-          <p>Waiting for SMS...</p>
-        </div>
-      </div>
-      <div class="call-logs-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
-        <h2 class="text-lg font-semibold text-[var(--text-light)] mb-2">Call Logs</h2>
-        <div id="call-logs" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md h-64 overflow-y-auto">
-          <p>Waiting for call logs...</p>
-        </div>
-      </div>
-    </div>
-    <!-- Status Panel -->
-    <div class="status-panel bg-[var(--background-secondary)] rounded-lg p-4 shadow-lg fade-in">
-      <div class="flex items-center gap-2 mb-2">
-        <span class="status-dot w-3 h-3 rounded-full bg-[var(--accent)]"></span>
-        <h2 class="text-lg font-semibold text-[var(--text-light)]">Stream Status</h2>
-      </div>
-      <div id="status" class="text-[var(--text-secondary)] text-sm bg-black/20 p-3 rounded-md mb-2">Waiting for Android stream...</div>
-      <div class="status-details grid grid-cols-2 gap-2 text-sm">
-        <div>
-          <p><strong>Connection:</strong> <span id="connection-status">Disconnected</span></p>
-          <p><strong>Camera Resolution:</strong> <span id="camera-resolution">N/A</span></p>
-          <p><strong>Screen Resolution:</strong> <span id="screen-resolution">N/A</span></p>
-        </div>
-        <div>
-          <p><strong>Web Client ID:</strong> <span id="web-client-id">N/A</span></p>
-          <p><strong>Android Client ID:</strong> <span id="android-client-id">N/A</span></p>
-          <p><strong>Frame Rate:</strong> <span id="frame-rate">N/A</span></p>
-        </div>
-      </div>
-      <div class="controls flex gap-2 mt-2">
-        <button id="mute-audio" class="hover-scale bg-[var(--primary-dark)] text-[var(--text-light)] px-4 py-2 rounded-md hover:bg-[var(--primary-light)] transition-colors">Mute Audio</button>
-        <button id="pause-video" class="hover-scale bg-[var(--primary-dark)] text-[var(--text-light)] px-4 py-2 rounded-md hover:bg-[var(--primary-light)] transition-colors">Pause Video</button>
-      </div>
-    </div>
-  </div>
-</div>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="client.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
 </body>
 </html>
