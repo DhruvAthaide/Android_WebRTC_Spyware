@@ -1,10 +1,24 @@
-const socket = io('http://<Your Server IP Address>:3000', {
+// Dynamic IP detection based on environment
+function getServerURL() {
+  const hostname = window.location.hostname;
+
+  // If accessing via localhost or internal IP, use localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.')) {
+    return 'http://localhost:3000';
+  }
+
+  // If accessing via external IP, use the same external IP
+  return `http://${hostname}:3000`;
+}
+
+const socket = io(getServerURL(), {
   reconnection: true,
   reconnectionAttempts: 15,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   randomizationFactor: 0.5
 });
+
 const videoEl = document.getElementById('remoteVideo');
 const statusDiv = document.getElementById('status');
 const notificationsDiv = document.getElementById('notifications');
