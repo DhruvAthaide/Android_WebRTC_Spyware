@@ -32,7 +32,7 @@
         }
         
         h1 {
-            font-size: 1._ROBOTO_ITALIC;
+            font-size: 1.8rem;
             font-weight: 700;
             text-align: center;
             color: #00ff00;
@@ -91,6 +91,9 @@
         
         .video-section {
             grid-row: 1 / span 4;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
         
         .video-container {
@@ -101,6 +104,7 @@
             border: 1px solid #00ff00;
             display: flex;
             flex-direction: column;
+            flex: 1;
         }
         
         .video-header {
@@ -132,9 +136,9 @@
             50% { opacity: 0.7; }
         }
         
-        #remoteVideo {
+        .remote-video {
             width: 100%;
-            height: calc(100vh - 200px);
+            height: 100%;
             background: #0d0d0d;
             border-radius: 12px;
             border: 2px solid #00ff00;
@@ -421,10 +425,17 @@
             <div class="video-section">
                 <div class="video-container">
                     <div class="video-header">
-                        <h2>Live Camera Feed</h2>
+                        <h2>Live Front Camera Feed</h2>
                         <div class="live-indicator">● LIVE</div>
                     </div>
-                    <video id="remoteVideo" autoplay playsinline></video>
+                    <video id="remoteVideoFront" class="remote-video" autoplay playsinline></video>
+                </div>
+                <div class="video-container">
+                    <div class="video-header">
+                        <h2>Live Back Camera Feed</h2>
+                        <div class="live-indicator">● LIVE</div>
+                    </div>
+                    <video id="remoteVideoBack" class="remote-video" autoplay playsinline></video>
                 </div>
             </div>
             

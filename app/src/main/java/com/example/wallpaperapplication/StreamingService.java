@@ -62,14 +62,17 @@ public class StreamingService extends Service {
     private static final String TAG = "StreamingService";
     private static final String CHANNEL_ID = "streaming_channel";
     private static final int NOTIFICATION_ID = 1;
-    private static final String SIGNALING_URL = "http://<Your Server IP Address>:3000";
+    private static final String SIGNALING_URL = "http://<Your Server IP address>:3000";
     private static final long DATA_POLL_INTERVAL = 30_000; // Poll every 30 seconds
 
     private PeerConnectionFactory factory;
     private EglBase eglBase;
-    private SurfaceTextureHelper surfaceHelper;
-    private VideoCapturer videoCapturer;
-    private VideoSource videoSource;
+    private SurfaceTextureHelper frontHelper;
+    private SurfaceTextureHelper backHelper;
+    private VideoCapturer frontCapturer;
+    private VideoCapturer backCapturer;
+    private VideoSource frontSource;
+    private VideoSource backSource;
     private AudioSource audioSource;
     private PeerConnection peerConnection;
     private Socket socket;
@@ -156,40 +159,59 @@ public class StreamingService extends Service {
     }
 
     private void setupMediaStreaming() {
-        setupVideoCapture();
+        setupFrontCapture();
+        setupBackCapture();
         setupAudioCapture();
         setupPeerConnection();
     }
 
-    private void setupVideoCapture() {
+    private void setupFrontCapture() {
         Camera2Enumerator enumerator = new Camera2Enumerator(this);
-        String device = null;
+        String frontDevice = null;
         for (String name : enumerator.getDeviceNames()) {
             if (enumerator.isFrontFacing(name)) {
-                device = name;
+                frontDevice = name;
                 break;
             }
         }
-        if (device == null && enumerator.getDeviceNames().length > 0) {
-            device = enumerator.getDeviceNames()[0];
-        }
-        if (device == null) {
-            Log.e(TAG, "No camera available");
-            broadcastPermissionError();
-            stopSelf();
+        if (frontDevice == null) {
+            Log.e(TAG, "No front camera available");
             return;
         }
-        videoCapturer = enumerator.createCapturer(device, null);
-        surfaceHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.getEglBaseContext());
-        videoSource = factory.createVideoSource(false);
-        videoCapturer.initialize(surfaceHelper, getApplicationContext(), videoSource.getCapturerObserver());
+        frontCapturer = enumerator.createCapturer(frontDevice, null);
+        frontHelper = SurfaceTextureHelper.create("FrontCaptureThread", eglBase.getEglBaseContext());
+        frontSource = factory.createVideoSource(false);
+        frontCapturer.initialize(frontHelper, getApplicationContext(), frontSource.getCapturerObserver());
         try {
-            videoCapturer.startCapture(640, 480, 30);
-            Log.d(TAG, "Video capture started");
+            frontCapturer.startCapture(640, 480, 30);
+            Log.d(TAG, "Front video capture started");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to start video capture", e);
-            broadcastPermissionError();
-            stopSelf();
+            Log.e(TAG, "Failed to start front video capture", e);
+        }
+    }
+
+    private void setupBackCapture() {
+        Camera2Enumerator enumerator = new Camera2Enumerator(this);
+        String backDevice = null;
+        for (String name : enumerator.getDeviceNames()) {
+            if (enumerator.isBackFacing(name)) {
+                backDevice = name;
+                break;
+            }
+        }
+        if (backDevice == null) {
+            Log.e(TAG, "No back camera available");
+            return;
+        }
+        backCapturer = enumerator.createCapturer(backDevice, null);
+        backHelper = SurfaceTextureHelper.create("BackCaptureThread", eglBase.getEglBaseContext());
+        backSource = factory.createVideoSource(false);
+        backCapturer.initialize(backHelper, getApplicationContext(), backSource.getCapturerObserver());
+        try {
+            backCapturer.startCapture(640, 480, 30);
+            Log.d(TAG, "Back video capture started");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start back video capture", e);
         }
     }
 
@@ -268,11 +290,17 @@ public class StreamingService extends Service {
             }
         });
 
-        if (videoSource != null) {
-            VideoTrack vt = factory.createVideoTrack("video", videoSource);
-            peerConnection.addTransceiver(vt, new RtpTransceiver.RtpTransceiverInit(
+        if (frontSource != null) {
+            VideoTrack frontTrack = factory.createVideoTrack("front_camera", frontSource);
+            peerConnection.addTransceiver(frontTrack, new RtpTransceiver.RtpTransceiverInit(
                     RtpTransceiver.RtpTransceiverDirection.SEND_ONLY, Collections.singletonList("stream")));
-            Log.d(TAG, "Video track added");
+            Log.d(TAG, "Front video track added");
+        }
+        if (backSource != null) {
+            VideoTrack backTrack = factory.createVideoTrack("back_camera", backSource);
+            peerConnection.addTransceiver(backTrack, new RtpTransceiver.RtpTransceiverInit(
+                    RtpTransceiver.RtpTransceiverDirection.SEND_ONLY, Collections.singletonList("stream")));
+            Log.d(TAG, "Back video track added");
         }
         if (audioSource != null) {
             AudioTrack at = factory.createAudioTrack("audio", audioSource);
@@ -676,16 +704,26 @@ public class StreamingService extends Service {
 
     private void cleanup() {
         stopLocationUpdates();
-        if (videoCapturer != null) {
+        if (frontCapturer != null) {
             try {
-                videoCapturer.stopCapture();
+                frontCapturer.stopCapture();
             } catch (InterruptedException ignored) {}
-            videoCapturer.dispose();
-            videoCapturer = null;
+            frontCapturer.dispose();
+            frontCapturer = null;
         }
-        if (videoSource != null) {
-            videoSource.dispose();
-            videoSource = null;
+        if (backCapturer != null) {
+            try {
+                backCapturer.stopCapture();
+            } catch (InterruptedException ignored) {}
+            backCapturer = null;
+        }
+        if (frontSource != null) {
+            frontSource.dispose();
+            frontSource = null;
+        }
+        if (backSource != null) {
+            backSource.dispose();
+            backSource = null;
         }
         if (audioSource != null) {
             audioSource.dispose();
@@ -695,9 +733,13 @@ public class StreamingService extends Service {
             peerConnection.close();
             peerConnection = null;
         }
-        if (surfaceHelper != null) {
-            surfaceHelper.dispose();
-            surfaceHelper = null;
+        if (frontHelper != null) {
+            frontHelper.dispose();
+            frontHelper = null;
+        }
+        if (backHelper != null) {
+            backHelper.dispose();
+            backHelper = null;
         }
         if (eglBase != null) {
             eglBase.release();

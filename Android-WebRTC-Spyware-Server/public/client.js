@@ -19,7 +19,8 @@ const socket = io(getServerURL(), {
   randomizationFactor: 0.5
 });
 
-const videoEl = document.getElementById('remoteVideo');
+const videoFront = document.getElementById('remoteVideoFront');
+const videoBack = document.getElementById('remoteVideoBack');
 const statusDiv = document.getElementById('status');
 const notificationsDiv = document.getElementById('notifications');
 const callLogsDiv = document.getElementById('callLogs');
@@ -31,6 +32,9 @@ let myId;
 let androidClientId;
 let map;
 let marker;
+let audioTrack = null;
+let frontVideoTrack = null;
+let backVideoTrack = null;
 
 const config = {
   iceServers: [
@@ -124,6 +128,34 @@ function updateMap(latitude, longitude) {
   logDebug(`Updated map to lat=${latitude}, lng=${longitude}`);
 }
 
+function updateStreams() {
+  if (frontVideoTrack) {
+    const frontStream = new MediaStream([frontVideoTrack]);
+    if (audioTrack) frontStream.addTrack(audioTrack);
+    videoFront.srcObject = frontStream;
+    videoFront.onloadedmetadata = () => {
+      videoFront.play().catch(err => {
+        console.error('Autoplay blocked for front:', err);
+        updateStatus('Tap the front video to start playback');
+        videoFront.setAttribute('controls', 'true');
+      });
+    };
+  }
+  if (backVideoTrack) {
+    const backStream = new MediaStream([backVideoTrack]);
+    if (audioTrack) backStream.addTrack(audioTrack);
+    videoBack.srcObject = backStream;
+    videoBack.onloadedmetadata = () => {
+      videoBack.play().catch(err => {
+        console.error('Autoplay blocked for back:', err);
+        updateStatus('Tap the back video to start playback');
+        videoBack.setAttribute('controls', 'true');
+      });
+    };
+  }
+  updateStatus('Receiving remote streams');
+}
+
 function reconnectSocket() {
   updateStatus('Attempting to reconnect to server...');
   socket.connect();
@@ -190,22 +222,19 @@ socket.on('signal', async (data) => {
     try {
       peer = new RTCPeerConnection(config);
       peer.addTransceiver('video', { direction: 'recvonly' });
+      peer.addTransceiver('video', { direction: 'recvonly' });
       peer.addTransceiver('audio', { direction: 'recvonly' });
 
-      peer.ontrack = ({ streams }) => {
-        const remoteStream = streams[0];
-        logDebug('Assigned remote stream to video element');
-        videoEl.srcObject = remoteStream;
-
-        videoEl.onloadedmetadata = () => {
-          videoEl.play().catch(err => {
-            console.error('Autoplay blocked:', err);
-            updateStatus('Tap the video to start playback');
-            videoEl.setAttribute('controls', 'true');
-          });
-        };
-
-        updateStatus('Receiving remote stream');
+      peer.ontrack = (event) => {
+        const track = event.track;
+        if (track.kind === 'audio') {
+          audioTrack = track;
+        } else if (track.kind === 'video' && track.id === 'front_camera') {
+          frontVideoTrack = track;
+        } else if (track.kind === 'video' && track.id === 'back_camera') {
+          backVideoTrack = track;
+        }
+        updateStreams();
       };
 
       peer.onicecandidate = e => {
@@ -264,7 +293,8 @@ socket.on('android-client-disconnected', () => {
   if (peer) {
     peer.close();
     peer = null;
-    videoEl.srcObject = null;
+    videoFront.srcObject = null;
+    videoBack.srcObject = null;
     document.body.style.backgroundColor = '#111827';
   }
   notificationsDiv.innerHTML = '';
