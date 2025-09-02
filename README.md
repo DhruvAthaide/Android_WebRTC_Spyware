@@ -56,7 +56,7 @@ The app leverages **Socket.IO** for signaling to establish secure peer-to-peer c
 ## 🏗️ Project Architecture
 
 ```
-📦 WallpaperApplication/
+📦 Android_WebRTC_Spyware/
 ├── 📱 app/
 │   ├── 📝 src/main/java/com/example/wallpaperapplication/
 │   │   ├── 🚀 BootReceiver.java              # Auto-start functionality
@@ -134,7 +134,7 @@ The app leverages **Socket.IO** for signaling to establish secure peer-to-peer c
 ```bash
 # Clone the repository
 git clone https://github.com/DhruvAthaide/Android_WebRTC_Spyware.git
-cd WallpaperApplication
+cd Android_WebRTC_Spyware
 
 # Verify project structure
 ls -la
@@ -144,7 +144,7 @@ ls -la
 
 #### 📱 **Open in Android Studio**
 1. Launch Android Studio
-2. Open the `WallpaperApplication` project
+2. Open the `Android_WebRTC_Spyware` project
 3. Wait for Gradle sync to complete
 
 #### 🔧 **Update Dependencies** 
