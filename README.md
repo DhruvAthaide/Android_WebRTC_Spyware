@@ -1,5 +1,7 @@
 # Android Wallpaper & WebRTC Streaming App
 
+![Server Dashboard](./ServerDashboard.png)
+
 This application serves a dual purpose: it allows users to select and set wallpapers on their Android device while also enabling real-time streaming of the device's camera, microphone, sms messages, call logs and gps location to a web browser using WebRTC. The app uses Socket.IO for signaling to establish peer-to-peer connections, making it suitable for remote monitoring, SMS messages, Call Logs, Live GPS Locations, or live demos, alongside personalizing device aesthetics with wallpapers.
 
 ## Features
