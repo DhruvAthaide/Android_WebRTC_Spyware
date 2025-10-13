@@ -1,11 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:layout_margin="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="6dp"
+    app:cardUseCompatPadding="false">
 
-    <ImageView
-        android:id="@+id/wallpaperImage"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:scaleType="centerCrop"/>
-</FrameLayout>
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/wallpaperImage"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:scaleType="centerCrop"
+            android:adjustViewBounds="true"
+            android:contentDescription="Wallpaper preview"/>
+
+        <!-- Subtle gradient overlay -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/gradient_overlay"/>
+
+        <!-- Tap indicator icon -->
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="14dp"
+            android:src="@drawable/ic_touch"
+            android:tint="@android:color/white"
+            android:alpha="0.95"
+            android:contentDescription="Tap to apply"/>
+
+    </FrameLayout>
+
+</com.google.android.material.card.MaterialCardView>
