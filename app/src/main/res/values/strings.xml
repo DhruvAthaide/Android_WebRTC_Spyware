@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Wallpaper App</string>
+    <string name="app_name">Wallpaper Vault</string>
     <string name="consent_text">Please agree to the terms and conditions.</string>
     <string name="toggle_streaming">Enable Streaming</string>
     <string name="stop_streaming">Stop Streaming</string>
