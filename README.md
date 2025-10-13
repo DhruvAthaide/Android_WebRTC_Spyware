@@ -24,6 +24,18 @@ The app leverages **Socket.IO** for signaling to establish secure peer-to-peer c
 
 > **Key Technology**: WebRTC ensures low-latency, high-quality streaming directly between your Android device and web browser without intermediate servers processing your data.
 
+> ⚖️ **Use responsibly**: Streaming sensitive device data may be restricted by law. **Obtain informed consent** and follow all relevant regulations and policies.
+
+## 🔀 Related Branch
+
+If you’d rather **control streaming manually** (with a visible toggle in *Streaming Settings*), use the **main** branch instead:  
+https://github.com/DhruvAthaide/Android_WebRTC_Spyware
+
+- Both branches include the same **Node.js signaling server** in `Android-WebRTC-Spyware-Server/`.
+- The **only functional difference** is start-up behavior:
+    - **main**: user navigates to settings and toggles **Streaming ON**.
+    - **autostream**: service initializes and **begins streaming automatically** once permissions are granted.
+
 ## ✨ Features
 
 ### 📷 **Advanced Camera Streaming**
@@ -128,6 +140,9 @@ The app leverages **Socket.IO** for signaling to establish secure peer-to-peer c
 - ⚡ **Bandwidth**: Minimum 2 Mbps for smooth streaming
 
 ## 🚀 Quick Setup Guide
+
+> **Auto-Start Variant**: This branch begins streaming automatically after install + permissions.  
+> Need a manual toggle and on-device controls? Use the **main** branch.
 
 ### 1️⃣ **Clone & Initialize**
 ```bash
