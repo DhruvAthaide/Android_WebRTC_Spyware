@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- drawable/gradient_overlay_dark.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="90"
+        android:startColor="#00000000"
+        android:centerColor="#50000000"
+        android:endColor="#B0000000"
+        android:type="linear"/>
+</shape>

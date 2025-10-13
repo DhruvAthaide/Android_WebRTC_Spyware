@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Wallpaper Vault</string>
+    <string name="consent_text">Please agree to the terms and conditions.</string>
+    <string name="toggle_streaming">Enable Streaming</string>
+    <string name="stop_streaming">Stop Streaming</string>
+    <string name="start_streaming_on_device_reboot">Start Streaming on Device Reboot</string>
+</resources>
