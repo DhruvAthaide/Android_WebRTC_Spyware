@@ -28,9 +28,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <!-- If targeting Android 10+ and you stream camera/mic, add the specific types -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -47,6 +51,11 @@
         <!-- Launcher activity -->
         <activity
             android:name=".ConsentActivity"
+            android:exported="true" />
+
+        <!-- Other activities -->
+        <activity
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -54,17 +63,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Other activities -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true" />
-
         <!-- Foreground service for camera and microphone streaming -->
         <service
             android:name=".StreamingService"
-            android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="camera|microphone" />
+            android:foregroundServiceType="camera|microphone|location" />
 
         <!-- Notification listener service -->
         <service
@@ -81,14 +84,12 @@
         <!-- Boot receiver: start streaming after reboot and after app updates -->
         <receiver
             android:name=".BootReceiver"
-            android:exported="true"
-            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            android:enabled="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <!-- devices with FBE (direct boot) -->
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
-                <!-- auto-resume after app updates -->
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
     </application>
