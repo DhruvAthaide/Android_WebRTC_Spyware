@@ -457,7 +457,7 @@ if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
 ```
 MIT License
 
-Copyright (c) 2024 Android WebRTC Streaming App
+Copyright (c) 2025 Android WebRTC Streaming App
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
