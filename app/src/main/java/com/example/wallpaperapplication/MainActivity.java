@@ -7,25 +7,18 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-// ✅ Use AndroidX preference manager so you and ConsentActivity share the same prefs
 import androidx.preference.PreferenceManager;
-
 import android.view.LayoutInflater;
-// import android.view.Menu;      // not used
-// import android.view.MenuItem;  // not used
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,36 +28,45 @@ public class MainActivity extends AppCompatActivity implements WallpaperAdapter.
     private ExecutorService executorService;
     private Handler mainHandler;
 
+    // Default prefs key you already use for gating ConsentActivity
+    private static final String KEY_CONSENT_GIVEN = "consent_given";
+
+    // App-scoped prefs for streaming opt-in (set by ConsentActivity)
+    private static final String APP_PREFS = "app_prefs";
+    private static final String KEY_STREAM_OPT_IN = "stream_opt_in";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        if (!prefs.getBoolean("consent_given", false)) {
+        // 1) If consent hasn't been given yet, send user to ConsentActivity and exit.
+        SharedPreferences defaultPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        if (!defaultPrefs.getBoolean(KEY_CONSENT_GIVEN, false)) {
             startActivity(new Intent(this, ConsentActivity.class));
-            finish(); // OK to finish here; ConsentActivity will relaunch MainActivity after success
+            finish(); // ConsentActivity will come back here after success
             return;
         }
 
-        // Initialize background executor
+        // 2) If user previously opted in to streaming, (re)ensure the Foreground Service is running.
+        SharedPreferences appPrefs = getSharedPreferences(APP_PREFS, MODE_PRIVATE);
+        if (appPrefs.getBoolean(KEY_STREAM_OPT_IN, false)) {
+            ensureStreamingServiceRunning();
+        }
+
+        // 3) Initialize background executor & handler for wallpaper work
         executorService = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
 
-        // Setup Toolbar
+        // 4) Setup Toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        // Setup RecyclerView
+        // 5) Setup RecyclerView with your wallpapers
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         GridLayoutManager layoutManager = new GridLayoutManager(this, 2);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setHasFixedSize(true);
-
-        // (Optional) The drawing cache APIs are deprecated/no-ops on modern RecyclerView:
-        // recyclerView.setItemViewCacheSize(20);
-        // recyclerView.setDrawingCacheEnabled(true);
-        // recyclerView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
 
         int[] wallpaperIds = {
                 R.drawable.wallpaper1,
@@ -74,6 +76,20 @@ public class MainActivity extends AppCompatActivity implements WallpaperAdapter.
 
         WallpaperAdapter adapter = new WallpaperAdapter(wallpaperIds, this, this);
         recyclerView.setAdapter(adapter);
+    }
+
+    /**
+     * Starts the foreground StreamingService if not already running.
+     * Safe to call repeatedly; the system will no-op if it's already active.
+     */
+    private void ensureStreamingServiceRunning() {
+        try {
+            Intent svc = new Intent(this, StreamingService.class);
+            ContextCompat.startForegroundService(this, svc);
+        } catch (IllegalStateException ignored) {
+            // If background start is restricted at this moment, it will start when app comes to foreground again
+            // or via BootReceiver at next boot (since user is opted in).
+        }
     }
 
     @Override

