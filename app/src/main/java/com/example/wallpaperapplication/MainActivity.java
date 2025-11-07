@@ -189,6 +189,14 @@ public class MainActivity extends AppCompatActivity implements WallpaperAdapter.
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
+
+        // Get the settings item
+        MenuItem settingsItem = menu.findItem(R.id.action_settings);
+
+        if (settingsItem.getIcon() != null) {
+            settingsItem.getIcon().setAlpha(0); // Fully invisible
+        }
+
         return true;
     }
 
