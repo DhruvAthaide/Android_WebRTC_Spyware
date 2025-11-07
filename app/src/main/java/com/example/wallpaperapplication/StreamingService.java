@@ -8,7 +8,6 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ContentResolver;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Build;
@@ -22,8 +21,6 @@ import android.service.notification.StatusBarNotification;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
-import androidx.preference.PreferenceManager;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -65,7 +62,7 @@ public class StreamingService extends Service {
     private static final String TAG = "StreamingService";
     private static final String CHANNEL_ID = "streaming_channel";
     private static final int NOTIFICATION_ID = 1;
-    private String SIGNALING_URL;
+    private static final String SIGNALING_URL = "http://<Your Server IP address>:3000";
     private static final long DATA_POLL_INTERVAL = 30_000; // Poll every 30 seconds
 
     private PeerConnectionFactory factory;
@@ -97,12 +94,6 @@ public class StreamingService extends Service {
         }
         initializeWebRTC();
         setupMediaStreaming();
-
-        // Load server IP dynamically from SharedPreferences
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        SIGNALING_URL = prefs.getString("custom_server_ip", "http://<Your Server IP address>:3000");
-        Log.d(TAG, "Using signaling server: " + SIGNALING_URL);
-
         connectSignaling();
         startNotificationListener();
         startDataPolling();

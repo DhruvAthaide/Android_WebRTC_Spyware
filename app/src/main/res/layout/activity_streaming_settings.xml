@@ -1,65 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
-    <LinearLayout
-        android:orientation="vertical"
+    <Switch
+        android:id="@+id/switch_boot"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:text="@string/start_streaming_on_device_reboot" />
 
-        <Switch
-            android:id="@+id/switch_boot"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/start_streaming_on_device_reboot" />
+    <Switch
+        android:id="@+id/streaming_switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:text="@string/toggle_streaming"
+        android:layout_marginTop="24dp" />
 
-        <Switch
-            android:id="@+id/streaming_switch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/toggle_streaming"
-            android:layout_marginTop="24dp" />
+    <Button
+        android:id="@+id/btn_stop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/stop_streaming"
+        android:layout_marginTop="8dp" />
 
-        <Button
-            android:id="@+id/btn_stop"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/stop_streaming"
-            android:layout_marginTop="8dp" />
-
-        <!-- New Section -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#DDD"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp" />
-
-        <EditText
-            android:id="@+id/ip_input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Enter Server IP:Port (e.g. 192.168.1.10:3000)"
-            android:inputType="textUri"
-            android:singleLine="true"
-            android:layout_marginBottom="8dp"/>
-
-        <Button
-            android:id="@+id/btn_submit_ip"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Submit Server Address" />
-
-        <Button
-            android:id="@+id/btn_default_ip"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Revert to Default Server"
-            android:layout_marginTop="8dp" />
-
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>
