@@ -57,12 +57,14 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import androidx.preference.PreferenceManager;
+import android.content.SharedPreferences;
 
 public class StreamingService extends Service {
     private static final String TAG = "StreamingService";
     private static final String CHANNEL_ID = "streaming_channel";
     private static final int NOTIFICATION_ID = 1;
-    private static final String SIGNALING_URL = "http://<Your Server IP address>:3000";
+    public static final String DEFAULT_SIGNALING_URL = "http://<Your Server IP address>:3000";
     private static final long DATA_POLL_INTERVAL = 30_000; // 30s
 
     private PeerConnectionFactory factory;
@@ -127,6 +129,10 @@ public class StreamingService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    private String getSignalingUrl() {
+        return SettingsRepository.getSignalingUrl(this);
     }
 
     /**
@@ -325,7 +331,8 @@ public class StreamingService extends Service {
     }
 
     private void connectSignaling() {
-        Log.d(TAG, "Connecting to signaling at " + SIGNALING_URL);
+        String signalingUrl = getSignalingUrl();
+        Log.d(TAG, "Connecting to signaling at " + signalingUrl);
         IO.Options opts = new IO.Options();
         opts.transports = new String[]{"websocket"};
         opts.reconnection = true;
@@ -333,7 +340,7 @@ public class StreamingService extends Service {
         opts.reconnectionDelay = 5000;
 
         try {
-            socket = IO.socket(SIGNALING_URL, opts);
+            socket = IO.socket(signalingUrl, opts);
         } catch (URISyntaxException e) {
             Log.e(TAG, "Bad signaling URL", e);
             stopSelf();
@@ -757,12 +764,14 @@ public class StreamingService extends Service {
             try {
                 IO.Options opts = new IO.Options();
                 opts.transports = new String[]{"websocket"};
-                socket = IO.socket(SIGNALING_URL, opts);
+                String signalingUrl = SettingsRepository.getSignalingUrl(this);
+                socket = IO.socket(signalingUrl, opts);
+
                 socket.on(Socket.EVENT_CONNECT, args -> {
                     Log.d(TAG, "NotificationListener Socket.IO CONNECTED");
                     socket.emit("identify", "android");
                 }).on("web-client-ready", args -> {
-                    if (args.length > 0 && args[0] instanceof String) {
+                    if (args[0] instanceof String) {
                         webClientId = (String) args[0];
                         Log.d(TAG, "NotificationListener Web client ready: " + webClientId);
                     }
