@@ -20,6 +20,37 @@
         android:text="@string/toggle_streaming"
         android:layout_marginTop="24dp" />
 
+    <!-- New: signaling server input -->
+    <EditText
+        android:id="@+id/et_signaling_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Signaling server (e.g. http://192.168.1.10:3000)"
+        android:inputType="textUri"
+        android:layout_marginTop="24dp" />
+
+    <!-- New: Save + Default buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <Button
+            android:id="@+id/btn_save_signaling_url"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Save" />
+
+        <Button
+            android:id="@+id/btn_use_default_signaling_url"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Use default" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/btn_stop"
         android:layout_width="match_parent"

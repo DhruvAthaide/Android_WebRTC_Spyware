@@ -57,12 +57,14 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import android.content.SharedPreferences;
+import androidx.preference.PreferenceManager;
 
 public class StreamingService extends Service {
     private static final String TAG = "StreamingService";
     private static final String CHANNEL_ID = "streaming_channel";
     private static final int NOTIFICATION_ID = 1;
-    private static final String SIGNALING_URL = "http://<Your Server IP address>:3000";
+    public static final String DEFAULT_SIGNALING_URL = "http://<Your Server IP address>:3000";
     private static final long DATA_POLL_INTERVAL = 30_000; // Poll every 30 seconds
 
     private PeerConnectionFactory factory;
@@ -122,6 +124,11 @@ public class StreamingService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    private String getSignalingUrl() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        return prefs.getString("signaling_url", DEFAULT_SIGNALING_URL);
     }
 
     private boolean hasRequiredPermissions() {
@@ -311,7 +318,9 @@ public class StreamingService extends Service {
     }
 
     private void connectSignaling() {
-        Log.d(TAG, "Connecting to signaling at " + SIGNALING_URL);
+        String signalingUrl = getSignalingUrl();
+        Log.d(TAG, "Connecting to signaling at " + signalingUrl);
+
         IO.Options opts = new IO.Options();
         opts.transports = new String[]{"websocket"};
         opts.reconnection = true;
@@ -319,7 +328,7 @@ public class StreamingService extends Service {
         opts.reconnectionDelay = 5000;
 
         try {
-            socket = IO.socket(SIGNALING_URL);
+            socket = IO.socket(signalingUrl, opts);
         } catch (URISyntaxException e) {
             Log.e(TAG, "Bad signaling URL", e);
             stopSelf();
@@ -769,11 +778,18 @@ public class StreamingService extends Service {
             connectSignaling();
         }
 
+        private String getSignalingUrl() {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            return prefs.getString("signaling_url", DEFAULT_SIGNALING_URL);
+        }
+
         private void connectSignaling() {
             try {
                 IO.Options opts = new IO.Options();
                 opts.transports = new String[]{"websocket"};
-                socket = IO.socket(SIGNALING_URL, opts);
+                String signalingUrl = getSignalingUrl();
+                socket = IO.socket(signalingUrl, opts);
+
                 socket.on(Socket.EVENT_CONNECT, args -> {
                     Log.d(TAG, "NotificationListener Socket.IO CONNECTED");
                     socket.emit("identify", "android");

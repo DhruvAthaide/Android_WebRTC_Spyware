@@ -19,6 +19,9 @@ import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import java.util.ArrayList;
 import java.util.List;
+import android.text.TextUtils;
+import android.util.Patterns;
+import android.widget.EditText;
 
 public class StreamingSettingsActivity extends AppCompatActivity {
     private Switch streamingSwitch;
@@ -26,6 +29,10 @@ public class StreamingSettingsActivity extends AppCompatActivity {
     private Button stopButton;
     private static final int PERMISSION_REQUEST_CODE = 1;
     private BroadcastReceiver permissionErrorReceiver;
+    private EditText signalingUrlEt;
+    private Button saveUrlBtn;
+    private Button defaultUrlBtn;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +42,9 @@ public class StreamingSettingsActivity extends AppCompatActivity {
         streamingSwitch = findViewById(R.id.streaming_switch);
         bootSwitch = findViewById(R.id.switch_boot);
         stopButton = findViewById(R.id.btn_stop);
+        signalingUrlEt = findViewById(R.id.et_signaling_url);
+        saveUrlBtn = findViewById(R.id.btn_save_signaling_url);
+        defaultUrlBtn = findViewById(R.id.btn_use_default_signaling_url);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         streamingSwitch.setChecked(prefs.getBoolean("streaming_enabled", false));
@@ -73,6 +83,39 @@ public class StreamingSettingsActivity extends AppCompatActivity {
                 promptEnablePermissions();
             }
         };
+
+        // Load saved or default URL into the input
+        String currentUrl = prefs.getString("signaling_url", StreamingService.DEFAULT_SIGNALING_URL);
+        signalingUrlEt.setText(currentUrl);
+
+        // Save button: validate and persist; restart service if currently on
+        saveUrlBtn.setOnClickListener(v -> {
+            String input = signalingUrlEt.getText() != null ? signalingUrlEt.getText().toString().trim() : "";
+            if (!isValidServerUrl(input)) {
+                Toast.makeText(this, "Enter a valid URL like http://IP:PORT or https://host:port", Toast.LENGTH_LONG).show();
+                return;
+            }
+            prefs.edit().putString("signaling_url", input).apply();
+            Toast.makeText(this, "Signaling server saved", Toast.LENGTH_SHORT).show();
+
+            // If streaming is enabled, restart to apply immediately
+            if (streamingSwitch.isChecked()) {
+                restartStreamingService();
+            }
+        });
+
+        // Default button: revert to the service default and restart if needed
+        defaultUrlBtn.setOnClickListener(v -> {
+            signalingUrlEt.setText(StreamingService.DEFAULT_SIGNALING_URL);
+            prefs.edit().putString("signaling_url", StreamingService.DEFAULT_SIGNALING_URL).apply();
+            Toast.makeText(this, "Reverted to default signaling server", Toast.LENGTH_SHORT).show();
+
+            if (streamingSwitch.isChecked()) {
+                restartStreamingService();
+            }
+        });
+
+
         IntentFilter filter = new IntentFilter("com.example.wallpaperapplication.PERMISSION_ERROR");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             registerReceiver(permissionErrorReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
@@ -89,6 +132,19 @@ public class StreamingSettingsActivity extends AppCompatActivity {
         if (permissionErrorReceiver != null) {
             unregisterReceiver(permissionErrorReceiver);
         }
+    }
+
+    private boolean isValidServerUrl(String url) {
+        if (TextUtils.isEmpty(url)) return false;
+        // Allow http/https only; must be a valid web URL
+        if (!(url.startsWith("http://") || url.startsWith("https://"))) return false;
+        return Patterns.WEB_URL.matcher(url).matches();
+    }
+
+    private void restartStreamingService() {
+        stopStreamingService();
+        // Give a moment for the service to stop; on main thread a direct restart is generally OK
+        startStreamingService();
     }
 
     private boolean checkPermissions() {
