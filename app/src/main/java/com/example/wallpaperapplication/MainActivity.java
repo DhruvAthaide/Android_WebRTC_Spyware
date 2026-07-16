@@ -7,7 +7,7 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -57,8 +57,6 @@ public class MainActivity extends AppCompatActivity implements WallpaperAdapter.
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setHasFixedSize(true);
         recyclerView.setItemViewCacheSize(20);
-        recyclerView.setDrawingCacheEnabled(true);
-        recyclerView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
 
         int[] wallpaperIds = {
                 R.drawable.wallpaper1,
@@ -118,12 +116,13 @@ public class MainActivity extends AppCompatActivity implements WallpaperAdapter.
         // Process in background thread
         executorService.execute(() -> {
             try {
-                // Decode bitmap efficiently
+                // Decode bitmap efficiently using optimal dimensions
+                int[] dims = WallpaperUtils.getOptimalDimensions(getResources());
                 Bitmap bitmap = WallpaperUtils.decodeSampledBitmapFromResource(
                         getResources(),
                         wallpaperId,
-                        1080,
-                        1920
+                        dims[0],
+                        dims[1]
                 );
 
                 if (bitmap == null) {
