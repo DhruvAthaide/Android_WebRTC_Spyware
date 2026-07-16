@@ -30,7 +30,9 @@ class LocalRecorder(
 
     private var mediaRecorder: MediaRecorder? = null
     private var surface: Surface? = null
+    @Volatile
     private var isRecording = false
+    @Volatile
     private var isStopping = false
 
     private var videoFilePath: String? = null
@@ -219,7 +221,17 @@ class LocalRecorder(
     private fun setupRecorder(): Boolean {
         return try {
             val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), "Recordings")
-            if (!dir.exists()) dir.mkdirs()
+            if (!dir.exists() && !dir.mkdirs()) {
+                Log.e(TAG, "Failed to create recordings directory: ${dir.absolutePath}")
+                return false
+            }
+            // Check external storage is available
+            val state = Environment.getExternalStorageState()
+            if (state != Environment.MEDIA_MOUNTED) {
+                Log.e(TAG, "External storage not mounted: $state")
+                return false
+            }
+
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             videoFilePath = File(dir, "REC_$timestamp.mp4").absolutePath
 
@@ -230,9 +242,8 @@ class LocalRecorder(
                 MediaRecorder()
             }
 
-            recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-
             // MIC may be busy during active WebRTC streaming — fall back to video-only gracefully
+            // IMPORTANT: AudioSource must be set BEFORE VideoSource per MediaRecorder state machine
             var audioInitialized = false
             try {
                 recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -241,6 +252,7 @@ class LocalRecorder(
                 Log.w(TAG, "MIC busy or unavailable — recording video only")
             }
 
+            recorder.setVideoSource(MediaRecorder.VideoSource.SURFACE)
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             recorder.setOutputFile(videoFilePath)
             recorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
