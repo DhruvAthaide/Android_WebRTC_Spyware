@@ -57,12 +57,8 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation("androidx.recyclerview:recyclerview:1.4.0")
     implementation("androidx.preference:preference:1.2.1")
-    implementation(libs.appcompat.v161)
     implementation(libs.core.ktx)
-    implementation(libs.recyclerview.v132)
-    implementation(libs.material.v1110)
     implementation(libs.androidx.activity.ktx)
-    implementation(libs.androidx.constraintlayout.v214)
     implementation(libs.play.services.location)
 
     // Firebase (BOM manages all Firebase library versions)
@@ -80,7 +76,6 @@ dependencies {
     // Networking
     implementation(libs.okhttp)
     implementation(libs.cardview)
-    implementation(libs.preference)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit.v115)
