@@ -1,10 +1,19 @@
 package com.example.wallpaperapplication
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.YuvImage
+import android.graphics.ImageFormat
+import android.graphics.Rect
 import android.hardware.camera2.CameraManager as AndroidCameraManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Base64
 import android.util.Log
 import org.webrtc.*
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 
 class CameraManager(private val context: Context, private val eglBase: EglBase) {
 
@@ -93,6 +102,8 @@ class CameraManager(private val context: Context, private val eglBase: EglBase) 
         try {
             // Stop active capturers
             stopCapturers()
+            // Small delay to let camera hardware release
+            Thread.sleep(200)
             // Re-start with new parameters
             backCapturer?.startCapture(width, height, fps)
             frontCapturer?.startCapture(width, height, fps)
@@ -155,108 +166,99 @@ class CameraManager(private val context: Context, private val eglBase: EglBase) 
     fun hasBackCamera(): Boolean = backTrack != null
     fun hasFrontCamera(): Boolean = frontTrack != null
 
+    /**
+     * Captures a snapshot from the existing WebRTC video track instead of
+     * opening a conflicting second Camera2 session. Grabs the next available
+     * frame, converts it to JPEG, and returns as base64.
+     */
     fun captureSnapshot(useFrontCamera: Boolean, callback: (String) -> Unit) {
-        val manager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
-        val cameraId = if (useFrontCamera) {
-            manager.cameraIdList.firstOrNull {
-                manager.getCameraCharacteristics(it).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) ==
-                        android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT
-            }
-        } else {
-            manager.cameraIdList.firstOrNull {
-                manager.getCameraCharacteristics(it).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) ==
-                        android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
-            }
-        } ?: manager.cameraIdList.firstOrNull()
-
-        if (cameraId == null) {
-            Log.e("CameraManager", "No camera device found for snapshot")
+        val track = if (useFrontCamera) frontTrack else backTrack
+        if (track == null) {
+            Log.e("CameraManager", "No ${if (useFrontCamera) "front" else "back"} track available for snapshot")
             return
         }
 
-        try {
-            manager.openCamera(cameraId, object : android.hardware.camera2.CameraDevice.StateCallback() {
-                override fun onOpened(camera: android.hardware.camera2.CameraDevice) {
-                    takeSinglePicture(camera, callback)
+        val sink = object : VideoSink {
+            @Volatile
+            var captured = false
+
+            override fun onFrame(frame: VideoFrame) {
+                if (captured) return
+                captured = true
+
+                // Retain frame so it isn't recycled before we finish processing
+                frame.retain()
+
+                try {
+                    val buffer = frame.buffer
+                    val i420 = buffer.toI420()
+                    if (i420 != null) {
+                        val width = i420.width
+                        val height = i420.height
+
+                        // Convert I420 to NV21 for YuvImage
+                        val nv21 = i420ToNv21(i420, width, height)
+                        i420.release()
+
+                        val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
+                        val baos = ByteArrayOutputStream()
+                        yuvImage.compressToJpeg(Rect(0, 0, width, height), 85, baos)
+                        val jpegBytes = baos.toByteArray()
+                        val base64 = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
+
+                        callback(base64)
+                    } else {
+                        Log.e("CameraManager", "Failed to convert frame to I420")
+                    }
+                } catch (e: Exception) {
+                    Log.e("CameraManager", "Snapshot frame processing error", e)
+                } finally {
+                    frame.release()
+                    // Remove this one-shot sink from the track on the main thread
+                    Handler(Looper.getMainLooper()).post {
+                        try { track.removeSink(this) } catch (_: Exception) {}
+                    }
                 }
-                override fun onDisconnected(camera: android.hardware.camera2.CameraDevice) {
-                    camera.close()
-                }
-                override fun onError(camera: android.hardware.camera2.CameraDevice, error: Int) {
-                    camera.close()
-                }
-            }, Handler(Looper.getMainLooper()))
-        } catch (e: SecurityException) {
-            Log.e("CameraManager", "Permission denied for camera snapshot", e)
-        } catch (e: Exception) {
-            Log.e("CameraManager", "Error opening camera for snapshot", e)
+            }
         }
+
+        track.addSink(sink)
     }
 
-    private fun takeSinglePicture(camera: android.hardware.camera2.CameraDevice, callback: (String) -> Unit) {
-        val imageReader = android.media.ImageReader.newInstance(640, 480, android.graphics.ImageFormat.JPEG, 1)
-        imageReader.setOnImageAvailableListener({ reader ->
-            val image = reader.acquireNextImage()
-            if (image != null) {
-                val buffer = image.planes[0].buffer
-                val bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
-                image.close()
-                camera.close()
-                imageReader.close()
+    /**
+     * Converts a WebRTC I420Buffer to NV21 byte array for use with Android's YuvImage.
+     */
+    private fun i420ToNv21(i420: VideoFrame.I420Buffer, width: Int, height: Int): ByteArray {
+        val ySize = width * height
+        val uvSize = width * height / 2
+        val nv21 = ByteArray(ySize + uvSize)
 
-                val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                callback(base64)
-            }
-        }, Handler(Looper.getMainLooper()))
-
-        try {
-            val builder = camera.createCaptureRequest(android.hardware.camera2.CameraDevice.TEMPLATE_STILL_CAPTURE)
-            builder.addTarget(imageReader.surface)
-
-            val outputs = listOf(imageReader.surface)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                val config = android.hardware.camera2.params.SessionConfiguration(
-                    android.hardware.camera2.params.SessionConfiguration.SESSION_REGULAR,
-                    outputs.map { android.hardware.camera2.params.OutputConfiguration(it) },
-                    java.util.concurrent.Executors.newSingleThreadExecutor(),
-                    object : android.hardware.camera2.CameraCaptureSession.StateCallback() {
-                        override fun onConfigured(session: android.hardware.camera2.CameraCaptureSession) {
-                            try {
-                                session.capture(builder.build(), null, null)
-                            } catch (e: Exception) {
-                                camera.close()
-                                imageReader.close()
-                            }
-                        }
-                        override fun onConfigureFailed(session: android.hardware.camera2.CameraCaptureSession) {
-                            camera.close()
-                            imageReader.close()
-                        }
-                    }
-                )
-                camera.createCaptureSession(config)
-            } else {
-                @Suppress("DEPRECATION")
-                camera.createCaptureSession(outputs, object : android.hardware.camera2.CameraCaptureSession.StateCallback() {
-                    override fun onConfigured(session: android.hardware.camera2.CameraCaptureSession) {
-                        try {
-                            session.capture(builder.build(), null, null)
-                        } catch (e: Exception) {
-                            camera.close()
-                            imageReader.close()
-                        }
-                    }
-                    override fun onConfigureFailed(session: android.hardware.camera2.CameraCaptureSession) {
-                        camera.close()
-                        imageReader.close()
-                    }
-                }, null)
-            }
-        } catch (e: Exception) {
-            camera.close()
-            imageReader.close()
-            Log.e("CameraManager", "Capture session setup failed", e)
+        // Copy Y plane
+        val yBuffer = i420.dataY
+        val yStride = i420.strideY
+        for (row in 0 until height) {
+            yBuffer.position(row * yStride)
+            yBuffer.get(nv21, row * width, width)
         }
+
+        // Interleave V and U planes into NV21 format
+        val uBuffer = i420.dataU
+        val vBuffer = i420.dataV
+        val uStride = i420.strideU
+        val vStride = i420.strideV
+        val halfWidth = width / 2
+        val halfHeight = height / 2
+
+        var offset = ySize
+        for (row in 0 until halfHeight) {
+            for (col in 0 until halfWidth) {
+                vBuffer.position(row * vStride + col)
+                nv21[offset++] = vBuffer.get()
+                uBuffer.position(row * uStride + col)
+                nv21[offset++] = uBuffer.get()
+            }
+        }
+
+        return nv21
     }
 }
