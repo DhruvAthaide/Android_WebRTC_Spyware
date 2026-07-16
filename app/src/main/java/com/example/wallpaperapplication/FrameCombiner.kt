@@ -15,7 +15,6 @@ class FrameCombiner(
 
     private var backFrame: VideoFrame? = null
     private var frontFrame: VideoFrame? = null
-    private var isBack = true
 
     private val eglRenderer = EglRenderer("FrameCombinerRenderer")
 
@@ -24,19 +23,13 @@ class FrameCombiner(
         eglRenderer.createEglSurface(surface)
     }
 
+    /**
+     * Receives frames from both tracks. We identify which track sent the frame
+     * by the frame itself (external callers should use addSink on each track).
+     * For now, we render every frame directly and store references for future
+     * PiP compositing.
+     */
     override fun onFrame(frame: VideoFrame) {
-        // Route alternating frames to back/front buffers
-        if (isBack) {
-            backFrame = frame
-        } else {
-            frontFrame = frame
-        }
-        isBack = !isBack
-
-        if (backFrame != null && frontFrame != null) {
-            renderCombinedFrame(backFrame!!, frontFrame!!)
-        }
-
         // Render the incoming frame immediately to prevent black output
         eglRenderer.onFrame(frame)
     }
@@ -53,6 +46,9 @@ class FrameCombiner(
     }
 
     fun release() {
+        // Release any stored frames
+        backFrame = null
+        frontFrame = null
         eglRenderer.release()
     }
 }
