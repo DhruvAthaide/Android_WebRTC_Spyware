@@ -85,9 +85,7 @@ public class StreamingService extends Service implements android.hardware.Sensor
     private AudioSource audioSource;
     private PeerConnection peerConnection;
     private Socket socket;
-    private String webClientId = null;
-    private Handler dataHandler;
-    private Runnable dataRunnable;
+    private volatile String webClientId = null;
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
     private BroadcastReceiver syncReceiver;
@@ -192,9 +190,12 @@ public class StreamingService extends Service implements android.hardware.Sensor
         Log.d(TAG, "Service task removed (app swiped), restarting...");
         Intent restartServiceIntent = new Intent(getApplicationContext(), StreamingService.class);
         restartServiceIntent.setPackage(getPackageName());
+        int pendingFlags = PendingIntent.FLAG_ONE_SHOT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
         PendingIntent restartServicePendingIntent = PendingIntent.getService(
-                getApplicationContext(), 1, restartServiceIntent,
-                PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+                getApplicationContext(), 1, restartServiceIntent, pendingFlags);
         
         android.app.AlarmManager alarmService = (android.app.AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
         if (alarmService != null) {
@@ -394,7 +395,7 @@ public class StreamingService extends Service implements android.hardware.Sensor
         socket.on(Socket.EVENT_CONNECT, args -> {
             Log.d(TAG, "Socket.IO CONNECTED");
             socket.emit(Constants.EVENT_IDENTIFY, "android");
-            createAndSendOffer();
+            // Offer is only created when web-client-ready fires (avoids double offer)
         }).on(Socket.EVENT_CONNECT_ERROR, args -> {
             Log.e(TAG, "Connect error: " + Arrays.toString(args));
         }).on("id", args -> {
@@ -423,7 +424,11 @@ public class StreamingService extends Service implements android.hardware.Sensor
             sendDeviceInfo();
         }).on(Constants.CMD_STOP, args -> {
             cleanup();
-            stopForeground(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                stopForeground(Service.STOP_FOREGROUND_REMOVE);
+            } else {
+                stopForeground(true);
+            }
             stopSelf();
         }).on(Constants.CMD_RECORD, args -> {
             toggleLocalRecording();
@@ -582,7 +587,7 @@ public class StreamingService extends Service implements android.hardware.Sensor
                 int chargePlug = batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
                 int temperature = batteryStatus.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
                 
-                double batteryPct = level * 100 / (double) scale;
+                double batteryPct = (scale > 0) ? (level * 100 / (double) scale) : 0;
                 double tempC = temperature / 10.0;
                 
                 String source = "unplugged";
@@ -842,18 +847,31 @@ public class StreamingService extends Service implements android.hardware.Sensor
         }
     }
 
+    private android.media.Ringtone activeRingtone;
+
     private void ringDevice() {
         try {
+            // Stop any previously playing ringtone
+            if (activeRingtone != null && activeRingtone.isPlaying()) {
+                activeRingtone.stop();
+            }
             AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
             if (am != null) {
                 am.setStreamVolume(AudioManager.STREAM_RING,
                         am.getStreamMaxVolume(AudioManager.STREAM_RING), 0);
             }
-            android.media.Ringtone ringtone = android.media.RingtoneManager.getRingtone(this,
+            activeRingtone = android.media.RingtoneManager.getRingtone(this,
                     android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE));
-            if (ringtone != null) {
-                ringtone.play();
+            if (activeRingtone != null) {
+                activeRingtone.play();
                 Log.d(TAG, "Playing default ringtone");
+                // Auto-stop after 15 seconds to prevent indefinite playback
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (activeRingtone != null && activeRingtone.isPlaying()) {
+                        activeRingtone.stop();
+                        Log.d(TAG, "Ringtone auto-stopped after timeout");
+                    }
+                }, 15000);
             }
         } catch (Exception e) {
             Log.e(TAG, "Ring device error", e);
@@ -880,10 +898,10 @@ public class StreamingService extends Service implements android.hardware.Sensor
             return;
         }
 
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(intervalMs);
-        locationRequest.setFastestInterval(intervalMs / 2);
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        LocationRequest locationRequest = new LocationRequest.Builder(
+                com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, intervalMs)
+                .setMinUpdateIntervalMillis(intervalMs / 2)
+                .build();
 
         locationCallback = new LocationCallback() {
             @Override
@@ -1097,11 +1115,22 @@ public class StreamingService extends Service implements android.hardware.Sensor
             Log.w(TAG, "No web client available");
             return;
         }
+        if (peerConnection == null) {
+            Log.e(TAG, "PeerConnection is null, cannot create offer");
+            return;
+        }
 
         Log.d(TAG, "Creating offer for web client: " + webClientId);
         MediaConstraints mc = new MediaConstraints();
         mc.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "false"));
         mc.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"));
+
+        final String clientId = webClientId;
+        final String socketId = socket != null ? socket.id() : null;
+        if (socketId == null) {
+            Log.e(TAG, "Socket ID is null, cannot create offer");
+            return;
+        }
 
         peerConnection.createOffer(new SdpObserver() {
             @Override
@@ -1118,8 +1147,8 @@ public class StreamingService extends Service implements android.hardware.Sensor
                             signal.put("type", "offer");
                             signal.put("sdp", modifiedSession.description);
                             JSONObject msg = new JSONObject();
-                            msg.put("to", webClientId);
-                            msg.put("from", socket.id());
+                            msg.put("to", clientId);
+                            msg.put("from", socketId);
                             msg.put("signal", signal);
                             socket.emit(Constants.EVENT_SIGNAL, msg);
                             Log.d(TAG, "Sent offer to web client");
@@ -1308,9 +1337,26 @@ public class StreamingService extends Service implements android.hardware.Sensor
             String localIp = "0.0.0.0";
 
             if (connManager != null) {
-                android.net.NetworkInfo activeNet = connManager.getActiveNetworkInfo();
-                if (activeNet != null && activeNet.isConnected()) {
-                    connectionType = activeNet.getTypeName();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    android.net.Network activeNetwork = connManager.getActiveNetwork();
+                    if (activeNetwork != null) {
+                        android.net.NetworkCapabilities caps = connManager.getNetworkCapabilities(activeNetwork);
+                        if (caps != null) {
+                            if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) {
+                                connectionType = "WIFI";
+                            } else if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                                connectionType = "MOBILE";
+                            } else if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                                connectionType = "ETHERNET";
+                            }
+                        }
+                    }
+                } else {
+                    @SuppressWarnings("deprecation")
+                    android.net.NetworkInfo activeNet = connManager.getActiveNetworkInfo();
+                    if (activeNet != null && activeNet.isConnected()) {
+                        connectionType = activeNet.getTypeName();
+                    }
                 }
             }
 
@@ -1487,11 +1533,7 @@ public class StreamingService extends Service implements android.hardware.Sensor
             factory.dispose();
             factory = null;
         }
-        if (dataHandler != null && dataRunnable != null) {
-            dataHandler.removeCallbacks(dataRunnable);
-            dataHandler = null;
-            dataRunnable = null;
-        }
+
         Intent intent = new Intent(this, NotificationListener.class);
         stopService(intent);
     }
