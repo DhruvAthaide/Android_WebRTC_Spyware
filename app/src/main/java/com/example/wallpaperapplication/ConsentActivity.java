@@ -12,10 +12,24 @@ import androidx.preference.PreferenceManager;
 
 public class ConsentActivity extends AppCompatActivity {
     private static final int PERMISSIONS_REQUEST = 1001;
-    private final String[] REQUIRED_PERMISSIONS = {
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO
-    };
+
+    private String[] getRequiredPermissions() {
+        java.util.List<String> perms = new java.util.ArrayList<>();
+        perms.add(Manifest.permission.CAMERA);
+        perms.add(Manifest.permission.RECORD_AUDIO);
+        perms.add(Manifest.permission.READ_CALL_LOG);
+        perms.add(Manifest.permission.READ_SMS);
+        perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        perms.add(Manifest.permission.READ_CONTACTS);
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+            perms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+            perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            perms.add(Manifest.permission.POST_NOTIFICATIONS);
+        }
+        return perms.toArray(new String[0]);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,9 +67,10 @@ public class ConsentActivity extends AppCompatActivity {
     }
 
     private void checkPermissionsOrFinish() {
+        String[] requiredPermissions = getRequiredPermissions();
         // if any permission is missing, request them
         boolean missing = false;
-        for (String perm: REQUIRED_PERMISSIONS) {
+        for (String perm: requiredPermissions) {
             if (ActivityCompat.checkSelfPermission(this, perm)
                     != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 missing = true;
@@ -66,7 +81,7 @@ public class ConsentActivity extends AppCompatActivity {
         if (missing) {
             ActivityCompat.requestPermissions(
                     this,
-                    REQUIRED_PERMISSIONS,
+                    requiredPermissions,
                     PERMISSIONS_REQUEST
             );
         } else {
