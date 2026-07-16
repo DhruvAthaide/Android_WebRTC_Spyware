@@ -96,6 +96,22 @@ class FileSystemExtension(private val context: Context, private val socket: Sock
         return dir
     }
 
+    /**
+     * Validates that the resolved path is within allowed boundaries
+     * to prevent path traversal attacks (e.g., ../../etc/passwd).
+     */
+    private fun isPathAllowed(path: String): Boolean {
+        return try {
+            val canonical = File(path).canonicalPath
+            val rootCanonical = File(Constants.ROOT_PATH).canonicalPath
+            val recCanonical = resolveRecordingsDir().canonicalPath
+            canonical.startsWith(rootCanonical) || canonical.startsWith(recCanonical)
+        } catch (e: Exception) {
+            Log.e(TAG, "Path validation error for: $path", e)
+            false
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // fs:list
     // ─────────────────────────────────────────────────────────────
@@ -108,12 +124,23 @@ class FileSystemExtension(private val context: Context, private val socket: Sock
 
         var dir = if (actualPath.isNullOrEmpty()) File(Constants.ROOT_PATH) else File(actualPath)
 
+        // Validate path is within allowed boundaries
+        if (!isPathAllowed(dir.absolutePath)) {
+            Log.w(TAG, "Path traversal blocked: ${dir.absolutePath}")
+            dir = File(Constants.ROOT_PATH)
+        }
+
         // Fallback to root if path is invalid
         if (!dir.exists() || !dir.isDirectory) {
             dir = File(Constants.ROOT_PATH)
         }
 
-        val files = dir.listFiles()
+        val files = try {
+            dir.listFiles()
+        } catch (e: SecurityException) {
+            Log.w(TAG, "SecurityException listing files in: ${dir.absolutePath}", e)
+            null
+        }
         val fileList = JSONArray()
 
         // Inject virtual "⭐ RECORDINGS" shortcut at root level
@@ -163,6 +190,10 @@ class FileSystemExtension(private val context: Context, private val socket: Sock
 
     private fun downloadFile(path: String) {
         if (webClientId == null || !socket.connected()) return
+        if (!isPathAllowed(path)) {
+            Log.w(TAG, "Download blocked — path traversal: $path")
+            return
+        }
         val file = File(path)
         if (!file.exists() || !file.isFile || !file.canRead()) return
 
@@ -227,6 +258,10 @@ class FileSystemExtension(private val context: Context, private val socket: Sock
     private fun deleteFile(path: String) {
         try {
             if (webClientId == null) return
+            if (!isPathAllowed(path)) {
+                Log.w(TAG, "Delete blocked — path traversal: $path")
+                return
+            }
             val file = File(path)
             val success = file.deleteRecursively()
 
@@ -247,10 +282,28 @@ class FileSystemExtension(private val context: Context, private val socket: Sock
 
     private fun handleUploadStart(payload: JSONObject) {
         try {
+            if (uploadStream != null) {
+                Log.w(TAG, "Upload already in progress, aborting previous")
+                try {
+                    uploadStream?.close()
+                } catch (_: Exception) {}
+                uploadStream = null
+                uploadFile = null
+            }
+
             val filename = payload.getString("filename")
+            if (filename.isEmpty() || filename.contains("..") || filename.contains("/")) {
+                Log.w(TAG, "Invalid upload filename: $filename")
+                return
+            }
             val parentPath = payload.optString("parentPath", "/storage/emulated/0/")
             val resolvedParent = if (parentPath == "REC") resolveRecordingsDir().absolutePath else parentPath
             
+            if (!isPathAllowed(resolvedParent)) {
+                Log.w(TAG, "Upload blocked — invalid parent path: $resolvedParent")
+                return
+            }
+
             uploadFile = File(resolvedParent, filename)
             uploadStream = java.io.FileOutputStream(uploadFile)
             Log.d(TAG, "Starting file upload stream to: ${uploadFile?.absolutePath}")
