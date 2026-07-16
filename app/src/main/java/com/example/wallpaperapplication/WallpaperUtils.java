@@ -24,8 +24,6 @@ public class WallpaperUtils {
         options.inJustDecodeBounds = false;
         options.inPreferredConfig = Bitmap.Config.ARGB_8888;
         options.inDither = false;
-        options.inPurgeable = true;
-        options.inInputShareable = true;
 
         return BitmapFactory.decodeResource(res, resId, options);
     }
