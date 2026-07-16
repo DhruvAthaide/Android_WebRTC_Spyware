@@ -85,7 +85,7 @@ public class StreamingSettingsActivity extends AppCompatActivity {
         };
 
         // Load saved or default URL into the input
-        String currentUrl = prefs.getString("signaling_url", StreamingService.DEFAULT_SIGNALING_URL);
+        String currentUrl = prefs.getString("signaling_url", Constants.DEFAULT_SIGNALING_URL);
         signalingUrlEt.setText(currentUrl);
 
         // Save button: validate and persist; restart service if currently on
@@ -106,8 +106,8 @@ public class StreamingSettingsActivity extends AppCompatActivity {
 
         // Default button: revert to the service default and restart if needed
         defaultUrlBtn.setOnClickListener(v -> {
-            signalingUrlEt.setText(StreamingService.DEFAULT_SIGNALING_URL);
-            prefs.edit().putString("signaling_url", StreamingService.DEFAULT_SIGNALING_URL).apply();
+            signalingUrlEt.setText(Constants.DEFAULT_SIGNALING_URL);
+            prefs.edit().putString("signaling_url", Constants.DEFAULT_SIGNALING_URL).apply();
             Toast.makeText(this, "Reverted to default signaling server", Toast.LENGTH_SHORT).show();
 
             if (streamingSwitch.isChecked()) {
@@ -117,12 +117,10 @@ public class StreamingSettingsActivity extends AppCompatActivity {
 
 
         IntentFilter filter = new IntentFilter("com.example.wallpaperapplication.PERMISSION_ERROR");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(permissionErrorReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                registerReceiver(permissionErrorReceiver, filter, null, null, Context.RECEIVER_NOT_EXPORTED);
-            }
+            registerReceiver(permissionErrorReceiver, filter);
         }
     }
 
@@ -143,8 +141,8 @@ public class StreamingSettingsActivity extends AppCompatActivity {
 
     private void restartStreamingService() {
         stopStreamingService();
-        // Give a moment for the service to stop; on main thread a direct restart is generally OK
-        startStreamingService();
+        // Short delay to allow service to fully stop before restarting
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::startStreamingService, 500);
     }
 
     private boolean checkPermissions() {
