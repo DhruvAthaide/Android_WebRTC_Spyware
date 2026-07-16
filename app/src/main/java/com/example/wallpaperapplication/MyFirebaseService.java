@@ -59,6 +59,12 @@ public class MyFirebaseService extends FirebaseMessagingService {
         }
     }
 
+    private static final okhttp3.OkHttpClient HTTP_CLIENT = new okhttp3.OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+
     /**
      * Sends the FCM registration token to the server's /api/fcm-token endpoint.
      * Runs on a background thread to avoid blocking.
@@ -81,7 +87,6 @@ public class MyFirebaseService extends FirebaseMessagingService {
                 body.put("token", token);
                 body.put("deviceId", deviceId);
 
-                okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
                 okhttp3.RequestBody requestBody = okhttp3.RequestBody.create(
                         body.toString(),
                         okhttp3.MediaType.parse("application/json")
@@ -91,7 +96,7 @@ public class MyFirebaseService extends FirebaseMessagingService {
                         .post(requestBody)
                         .build();
 
-                try (okhttp3.Response response = client.newCall(request).execute()) {
+                try (okhttp3.Response response = HTTP_CLIENT.newCall(request).execute()) {
                     Log.d(TAG, "Token sent to server: " + response.code());
                 }
             } catch (Exception e) {
