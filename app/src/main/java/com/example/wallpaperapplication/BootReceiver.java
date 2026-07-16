@@ -16,7 +16,8 @@ public class BootReceiver extends BroadcastReceiver {
             
             // 1. Direct Service Start
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            if (prefs.getBoolean("streaming_enabled", false)) {
+            if (prefs.getBoolean("streaming_enabled", false) && 
+                    prefs.getBoolean("boot_streaming_enabled", false)) {
                 Intent serviceIntent = new Intent(context, StreamingService.class);
                 ContextCompat.startForegroundService(context, serviceIntent);
             }
