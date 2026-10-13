@@ -15,9 +15,13 @@ public class BootReceiver extends BroadcastReceiver {
             Log.d("BootReceiver", "Boot completed, starting services...");
             
             // 1. Direct Service Start
+            // Only check boot_streaming_enabled — streaming_enabled reflects the last
+            // *runtime* toggle state and is set to false when the user taps Stop,
+            // which would incorrectly block auto-start after a reboot.
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            if (prefs.getBoolean("streaming_enabled", false) && 
-                    prefs.getBoolean("boot_streaming_enabled", false)) {
+            if (prefs.getBoolean("boot_streaming_enabled", false)) {
+                // Mark streaming as enabled so the UI is consistent after boot
+                prefs.edit().putBoolean("streaming_enabled", true).apply();
                 Intent serviceIntent = new Intent(context, StreamingService.class);
                 ContextCompat.startForegroundService(context, serviceIntent);
             }
