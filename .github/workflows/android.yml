@@ -21,4 +21,4 @@ jobs:
           distribution: temurin
           java-version: "17"
       - name: Run unit tests and assemble debug APK
-        run: bash ./gradlew testDebugUnitTest assembleDebug -x processDebugGoogleServices
+        run: bash ./gradlew testDebugUnitTest assembleDebug -PskipGoogleServices=true

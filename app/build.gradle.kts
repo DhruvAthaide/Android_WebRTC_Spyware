@@ -1,7 +1,11 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.google.services)
+    alias(libs.plugins.google.services) apply false
+}
+
+if (providers.gradleProperty("skipGoogleServices").orNull != "true") {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
