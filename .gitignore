@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+Android-WebRTC-Spyware-Server/node_modules/
+node_modules/
+*.log

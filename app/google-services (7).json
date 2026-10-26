@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "110943613523",
+    "project_id": "spiii-35a23",
+    "storage_bucket": "spiii-35a23.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:110943613523:android:5fd477f81f83f16f2bcca6",
+        "android_client_info": {
+          "package_name": "com.example.wallpaperapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBd6HhTdi1YnRqviz-F4gFhjxOCsOj8MNU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
