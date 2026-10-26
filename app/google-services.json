@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "622058407092",
+    "project_id": "wallpap-da31a",
+    "storage_bucket": "wallpap-da31a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:622058407092:android:6a21862a3a11c4794b43e1",
+        "android_client_info": {
+          "package_name": "com.example.wallpaperapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKZW-D-3Sswt4DnbRHAJMT-RG5xsnVQ-Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

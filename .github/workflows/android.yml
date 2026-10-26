@@ -1,0 +1,65 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          SDKMANAGER_PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER_PATH" ]; then
+            SDKMANAGER_PATH="$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager"
+          fi
+
+          if [ ! -x "$SDKMANAGER_PATH" ]; then
+            echo "ERROR: sdkmanager not found in Android SDK"
+            exit 1
+          fi
+
+          yes | "$SDKMANAGER_PATH" --licenses
+          "$SDKMANAGER_PATH" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Create local.properties
+        shell: bash
+        run: |
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Debug-APK
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
